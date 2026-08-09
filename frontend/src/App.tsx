@@ -1,14 +1,13 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import Home from './pages/Home'
+import ToastContainer from './components/ui/ToastContainer'
+import AppRouter from './routes/AppRouter'
+import { ToastProvider } from './stores/toastStore'
 
 function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Home />} />
-      </Routes>
-    </BrowserRouter>
-  )
+  return <ToastProvider>
+    <AppRouter />
+    <ToastContainer />
+</ToastProvider> 
+  
 }
 
 export default App
