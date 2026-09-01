@@ -1,6 +1,9 @@
 import ConversationItem from "./ConversationItem"
-import { useConversation } from "../../../hooks/useConversation"
+import { useConversationContext } from '../../../contexts/ConversationContext'
+import { getLastMessagePreview } from '../../../utils/messagePreview'
 import { DEFAULT_AVATAR_URL } from "../../../constants"
+import { useSidebarTyping } from '../../../hooks/useSidebarTyping'
+import { useAuth } from '../../../hooks/useAuth'
 
 interface ConversationListProps {
   selectedId: string | null
@@ -8,24 +11,38 @@ interface ConversationListProps {
 }
 
 function ConversationList({ selectedId, onSelect }: ConversationListProps) {
-  const { conversations, loading } = useConversation()
-
-  
+  const { conversations, loading } = useConversationContext()
+  const typingConversations = useSidebarTyping()
+  const { user } = useAuth()
 
   if (loading) return <div className="p-4 text-sm text-[#565f71]">Đang tải...</div>
+  
 
   return (
     <div className="flex flex-col gap-1 overflow-y-auto flex-1 px-2 py-2">
-      {conversations.map((c) => (
-        <div key={c.id} onClick={() => onSelect(String(c.id))}>
-          <ConversationItem
+      {conversations.map((c) => {
+        const isUnread = !!(
+          c.last_message &&
+          String(c.last_message.sender_id) !== String(user?.id) &&
+          (!c.last_read_at || new Date(c.last_message.created_at).getTime() > new Date(c.last_read_at).getTime())
+        )
+
+        return (
+          <div key={c.id} onClick={() => onSelect(String(c.id))}>
+            <ConversationItem
             name={c.name}
-            lastMessage={c.last_message?.content}
-            avatar={c.avatar_url || DEFAULT_AVATAR_URL}
+            lastMessage={getLastMessagePreview(c.last_message)}
+            time={c.last_message?.created_at}
+            avatar={c.avatar_url}
             isActive={String(c.id) === selectedId}
+            isTyping={typingConversations.has(String(c.id))}
+            isUnread={isUnread}
+            conversationType={c.type}
+            memberAvatars={c.member_avatars}
           />
-        </div>
-      ))}
+          </div>
+        )
+      })}
     </div>
   )
 }

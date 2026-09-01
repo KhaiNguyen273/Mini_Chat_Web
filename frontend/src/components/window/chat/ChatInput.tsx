@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react'
 import type { MessageType } from '../../../types/message.types'
-import { useToast } from '../../../hooks/useToast'
+import { useConfirm } from '../../../hooks/useConfirm'
+
 
 interface AttachedFile {
   name: string
@@ -9,17 +10,46 @@ interface AttachedFile {
 
 interface ChatInputProps {
   sendMessage: (content: string, type?: MessageType, files?: File[]) => Promise<any>
+  iBlockedThem?: boolean
+  blockedByOther?: boolean
+  onUnblock?: () => void
+  onTyping?: () => void
+  onStopTyping?: () => void
 }
 
-function ChatInput({ sendMessage }: ChatInputProps) {
+function ChatInput({ sendMessage, iBlockedThem, blockedByOther, onUnblock, onTyping, onStopTyping }: ChatInputProps) {
   const [message, setMessage] = useState('')
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([])
-  const [sending, setSending] = useState(false) // cờ khoá khi đang gửi
+  const [sending, setSending] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const {showToast} = useToast();
+  const inputRef = useRef<HTMLInputElement>(null)
+  const confirm = useConfirm()
+
+  // họ chặn mình — không có quyền làm gì cả, chỉ báo lý do
+  if (blockedByOther) {
+    return (
+      <div className="flex items-center justify-center px-4 py-4 bg-white border-t border-[#e6ebef]">
+        <p className="text-sm text-[#ba1a1a] font-medium">Bạn không thể trả lời đoạn chat này</p>
+      </div>
+    )
+  }
+
+  // mình đã chặn họ — có nút Bỏ chặn để thao tác ngay tại đây
+  if (iBlockedThem) {
+    return (
+      <div className="flex items-center justify-center gap-1 px-4 py-4 bg-white border-t border-[#e6ebef]">
+        <p className="text-sm text-[#ba1a1a] font-medium">
+          Người dùng đã bị chặn —{' '}
+          <button onClick={onUnblock} className="underline font-semibold hover:opacity-80">
+            Bỏ chặn
+          </button>
+        </p>
+      </div>
+    )
+  }
 
   const handleSend = async () => {
-    if (sending) return // đang gửi rồi thì bỏ qua, không cho gửi chồng
+    if (sending) return
     if (!message.trim() && attachedFiles.length === 0) return
 
     const type: MessageType = attachedFiles.some(f => f.file.type.startsWith('image/'))
@@ -31,10 +61,19 @@ function ChatInput({ sendMessage }: ChatInputProps) {
       await sendMessage(message, type, attachedFiles.map(f => f.file))
       setMessage('')
       setAttachedFiles([])
-    } catch {
-      showToast('Gửi tin nhắn thất bại, vui lòng thử lại',"error")
+      onStopTyping?.()
+    } catch (err: any) {
+      const msg = err.response?.data?.message || err.message
+      await confirm({
+        title: 'Không thể gửi tin nhắn',
+        message: msg || 'Gửi tin nhắn thất bại, vui lòng thử lại',
+        confirmText: 'OK',
+        hideCancel: true,
+      })
+      window.location.reload()
     } finally {
       setSending(false)
+      setTimeout(() => inputRef.current?.focus(), 0)
     }
   }
 
@@ -79,47 +118,26 @@ function ChatInput({ sendMessage }: ChatInputProps) {
 
   return (
     <div className="flex items-end gap-3 px-4 py-3 bg-white border-t border-[#e6ebef]">
-
-      <input
-        ref={fileInputRef}
-        type="file"
-        className="hidden"
-        onChange={handleFileChange}
-        accept="image/*,.pdf,.doc,.docx,.zip"
-        multiple
-        disabled={sending}
-      />
-      <button
-        onClick={() => fileInputRef.current?.click()}
-        disabled={sending}
-        className="w-9 h-9 rounded-full hover:bg-[#f2f4f6] flex items-center justify-center shrink-0 transition-colors mb-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
+      <input ref={fileInputRef} type="file" className="hidden" onChange={handleFileChange} accept="image/*,.pdf,.doc,.docx,.zip" multiple disabled={sending}/>
+      <button onClick={() => fileInputRef.current?.click()} disabled={sending}
+        className="w-9 h-9 rounded-full hover:bg-[#f2f4f6] flex items-center justify-center shrink-0 transition-colors mb-0.5 disabled:opacity-50 disabled:cursor-not-allowed">
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2">
           <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
         </svg>
       </button>
 
       <div className="flex-1 flex flex-col bg-[#f2f4f6] rounded-2xl px-4 py-2 gap-2">
-
         {attachedFiles.length > 0 && (
           <div className="flex flex-wrap gap-2 pt-1">
             {attachedFiles.map((f, i) => (
-              <div
-                key={i}
-                className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 shadow-sm max-w-[160px] relative group"
-              >
+              <div key={i} className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 shadow-sm max-w-[160px] relative group">
                 <div className="w-7 h-7 rounded-lg bg-[#d7e3ff] flex items-center justify-center shrink-0">
                   {getFileIcon(f.name)}
                 </div>
                 <p className="text-xs font-medium text-[#1a1c1e] truncate">{f.name}</p>
-                <button
-                  onClick={() => removeFile(i)}
-                  disabled={sending}
-                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#e6ebef] hover:bg-[#ba1a1a] hover:text-white flex items-center justify-center transition-colors disabled:opacity-50"
-                >
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M18 6 6 18M6 6l12 12"/>
-                  </svg>
+                <button onClick={() => removeFile(i)} disabled={sending}
+                  className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#e6ebef] hover:bg-[#ba1a1a] hover:text-white flex items-center justify-center transition-colors disabled:opacity-50">
+                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M18 6 6 18M6 6l12 12"/></svg>
                 </button>
               </div>
             ))}
@@ -127,53 +145,21 @@ function ChatInput({ sendMessage }: ChatInputProps) {
         )}
 
         <div className="flex items-center gap-2">
-          <input
-            type="text"
-            placeholder="Aa"
-            value={message}
-            onChange={e => setMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            disabled={sending}
-            className="flex-1 text-sm bg-transparent outline-none text-[#1a1c1e] placeholder:text-[#70787d] disabled:opacity-60"
-          />
-          {!message && attachedFiles.length === 0 && (
-            <button className="shrink-0" disabled={sending}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2">
-                <circle cx="12" cy="12" r="10"/>
-                <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
-                <circle cx="9" cy="9" r="0.5" fill="#70787d"/>
-                <circle cx="15" cy="9" r="0.5" fill="#70787d"/>
-              </svg>
-            </button>
-          )}
+          <input ref={inputRef} type="text" placeholder="Aa" value={message}
+            onChange={e => { setMessage(e.target.value); onTyping?.() }}
+            onKeyDown={handleKeyDown} disabled={sending}
+            className="flex-1 text-sm bg-transparent outline-none text-[#1a1c1e] placeholder:text-[#70787d] disabled:opacity-60"/>
         </div>
       </div>
 
-      {hasContent ? (
-        <button
-          onClick={handleSend}
-          disabled={sending}
-          className="w-9 h-9 rounded-full hover:bg-[#f2f4f6] flex items-center justify-center shrink-0 transition-all mb-0.5 disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {sending ? (
-            <svg className="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2">
-              <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-            </svg>
-          ) : (
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="#2563eb">
-              <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
-            </svg>
-          )}
-        </button>
-      ) : (
-        <button className="w-9 h-9 rounded-full hover:bg-[#f2f4f6] flex items-center justify-center shrink-0 transition-colors mb-0.5">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2">
-            <path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3H14z"/>
-            <path d="M7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/>
-          </svg>
-        </button>
-      )}
-
+      <button onClick={handleSend} disabled={sending || !hasContent}
+        className="w-9 h-9 rounded-full hover:bg-[#f2f4f6] flex items-center justify-center shrink-0 transition-all mb-0.5 disabled:opacity-50 disabled:cursor-not-allowed">
+        {sending ? (
+          <svg className="animate-spin" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2563eb" strokeWidth="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+        ) : (
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="#2563eb"><path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/></svg>
+        )}
+      </button>
     </div>
   )
 }

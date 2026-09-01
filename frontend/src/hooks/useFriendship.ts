@@ -3,31 +3,34 @@ import {
   sendFriendRequestApi,
   acceptFriendRequestApi,
   rejectFriendRequestApi,
-  blockFriendApi,
   removeFriendshipApi,
   getFriendsApi,
   getFriendRequestsApi,
   searchUsersApi,
 } from '../api/friendship.api'
 import type { Friend, FriendRequest, SearchedContact } from '../types/friendship.types'
+import { usePresenceContext } from '../contexts/PresenceContext'
 
 export function useFriendship() {
   const [friends, setFriends] = useState<Friend[]>([])
   const [requests, setRequests] = useState<FriendRequest[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const { seedOnlineStatus } = usePresenceContext()
 
   const fetchFriends = useCallback(async () => {
     setLoading(true)
     setError('')
     try {
-      setFriends(await getFriendsApi())
+      const data = await getFriendsApi()
+      setFriends(data)
+      data.forEach((f) => seedOnlineStatus(f.id, !!f.is_online, f.last_seen_at))
     } catch (err: any) {
       setError(err.response?.data?.message || 'Không tải được danh sách bạn bè')
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [seedOnlineStatus])
 
   const fetchRequests = useCallback(async () => {
     try {
@@ -38,30 +41,22 @@ export function useFriendship() {
   }, [])
 
   const sendRequest = async (receiverId: string) => {
-  try {
-    return await sendFriendRequestApi(receiverId) // { id, status: 'pending' }
-  } catch (err: any) {
-    setError(err.response?.data?.message || 'Gửi lời mời thất bại')
-    throw err
+    try {
+      return await sendFriendRequestApi(receiverId)
+    } catch (err: any) {
+      setError(err.response?.data?.message || 'Gửi lời mời thất bại')
+      throw err
+    }
   }
-}
 
   const acceptRequest = async (friendshipId: string) => {
-    const result = await acceptFriendRequestApi(friendshipId) // { id, status: 'accepted' }
+    await acceptFriendRequestApi(friendshipId)
     setRequests((prev) => prev.filter((r) => r.id !== friendshipId))
     await fetchFriends()
-    return result
   }
 
   const rejectRequest = async (friendshipId: string) => {
-    const result = await rejectFriendRequestApi(friendshipId)
-    setRequests((prev) => prev.filter((r) => r.id !== friendshipId))
-    return result
-  }
-
-  const blockUser = async (friendshipId: string) => {
-    await blockFriendApi(friendshipId)
-    setFriends((prev) => prev.filter((f) => f.friendship_id !== friendshipId))
+    await rejectFriendRequestApi(friendshipId)
     setRequests((prev) => prev.filter((r) => r.id !== friendshipId))
   }
 
@@ -70,7 +65,6 @@ export function useFriendship() {
     setFriends((prev) => prev.filter((f) => f.friendship_id !== friendshipId))
   }
 
-  // giờ chỉ còn gọi thẳng API, không tự suy luận relation nữa
   const searchContacts = async (phone: string): Promise<SearchedContact[]> => {
     return searchUsersApi(phone)
   }
@@ -88,7 +82,6 @@ export function useFriendship() {
     sendRequest,
     acceptRequest,
     rejectRequest,
-    blockUser,
     unfriend,
     searchContacts,
     refetchFriends: fetchFriends,

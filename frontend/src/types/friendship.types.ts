@@ -6,11 +6,12 @@ export interface Friend {
   name: string
   avatar_url?: string
   friendship_id: string
+  is_online?: boolean // mới
 }
 
 export interface FriendRequest {
-  id: string          // id bản ghi friendship
-  sender_id: string    // id người gửi lời mời — mới thêm
+  id: string
+  sender_id: string
   name: string
   avatar_url?: string
   status: FriendshipStatus
@@ -21,7 +22,6 @@ export interface CreateFriendshipResponse {
   status: FriendshipStatus
 }
 
-// kết quả search — backend trả sẵn relation, không cần FE tự suy luận
 export interface SearchedContact {
   id: string
   phone: string

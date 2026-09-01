@@ -7,21 +7,21 @@ export const create = async (
   type: string,
   referenceId: number | null,
   referenceType: string | null,
-  preview: string | null
+  preview: string | null,
+  conversationId: number | null // mới
 ) => {
   const [result] = await pool.query<ResultSetHeader>(
-    `INSERT INTO notifications (user_id, actor_id, type, reference_id, reference_type, preview) 
-     VALUES (?, ?, ?, ?, ?, ?)`,
-    [userId, actorId, type, referenceId, referenceType, preview]
+    `INSERT INTO notifications (user_id, actor_id, type, reference_id, reference_type, preview, conversation_id) 
+     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    [userId, actorId, type, referenceId, referenceType, preview, conversationId]
   );
   return result.insertId;
 };
 
-// JOIN cố định sang users theo actor_id — không cần CASE/điều kiện theo reference_type nữa
 export const listByUser = async (userId: number) => {
   const [rows] = await pool.query<RowDataPacket[]>(
     `SELECT 
-       n.id, n.type, n.reference_id, n.reference_type, n.preview, n.is_read, n.created_at,
+       n.id, n.type, n.reference_id, n.reference_type, n.conversation_id, n.preview, n.is_read, n.created_at,
        u.id AS actor_id, u.name AS actor_name, u.avatar_url AS actor_avatar_url
      FROM notifications n
      LEFT JOIN users u ON u.id = n.actor_id
@@ -53,17 +53,19 @@ export const upsertByReference = async (
   type: string,
   referenceId: number,
   referenceType: string,
-  preview: string
+  preview: string,
+  conversationId: number | null // thêm
 ) => {
   await pool.query(
-    `INSERT INTO notifications (user_id, actor_id, type, reference_id, reference_type, preview, is_read)
-     VALUES (?, ?, ?, ?, ?, ?, false)
+    `INSERT INTO notifications (user_id, actor_id, type, reference_id, reference_type, preview, conversation_id, is_read)
+     VALUES (?, ?, ?, ?, ?, ?, ?, false)
      ON DUPLICATE KEY UPDATE 
        actor_id = VALUES(actor_id),
        preview = VALUES(preview),
+       conversation_id = VALUES(conversation_id),
        is_read = false,
        created_at = NOW()`,
-    [userId, actorId, type, referenceId, referenceType, preview]
+    [userId, actorId, type, referenceId, referenceType, preview, conversationId]
   );
 };
 
@@ -73,4 +75,39 @@ export const deleteByReference = async (userId: number, referenceId: number, ref
     "DELETE FROM notifications WHERE user_id = ? AND reference_id = ? AND reference_type = ?",
     [userId, referenceId, referenceType]
   );
+};
+
+// thêm vào file hiện có — lấy 1 notification đầy đủ theo id, dùng để emit realtime
+export const findById = async (id: number) => {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT 
+       n.id, n.type, n.reference_id, n.reference_type, n.conversation_id, n.preview, n.is_read, n.created_at,
+       u.id AS actor_id, u.name AS actor_name, u.avatar_url AS actor_avatar_url
+     FROM notifications n
+     LEFT JOIN users u ON u.id = n.actor_id
+     WHERE n.id = ?`,
+    [id]
+  );
+  return rows[0] || null;
+};
+
+// dùng cho case upsert (pending_message) — vì INSERT ... ON DUPLICATE KEY UPDATE
+// không trả insertId đáng tin cậy khi rơi vào nhánh UPDATE, nên tra lại theo
+// reference thay vì theo id
+export const findByReference = async (
+  userId: number,
+  type: string,
+  referenceId: number,
+  referenceType: string
+) => {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT 
+       n.id, n.type, n.reference_id, n.reference_type, n.conversation_id, n.preview, n.is_read, n.created_at,
+       u.id AS actor_id, u.name AS actor_name, u.avatar_url AS actor_avatar_url
+     FROM notifications n
+     LEFT JOIN users u ON u.id = n.actor_id
+     WHERE n.user_id = ? AND n.type = ? AND n.reference_id = ? AND n.reference_type = ?`,
+    [userId, type, referenceId, referenceType]
+  );
+  return rows[0] || null;
 };

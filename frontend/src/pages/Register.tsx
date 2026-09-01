@@ -13,6 +13,8 @@ function Register() {
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const handleSubmit = async () => {
     setError('')
@@ -21,18 +23,20 @@ function Register() {
       setError('Vui lòng điền đầy đủ thông tin')
       return
     }
+    if (password.length < 5) {
+      setError('Mật khẩu phải có tối thiểu 5 ký tự')
+      return
+    }
     if (password !== confirmPassword) {
       setError('Mật khẩu xác nhận không khớp')
       return
     }
-  
+
     setLoading(true)
     try {
       await register({ phone, password, name })
-      // đăng ký xong không có token → điều hướng sang login, không auto login
       navigate('/login')
     } catch (err: any) {
-      // backend trả 400 "Phone already registered" khi phone đã tồn tại
       setError(err.response?.data?.message || 'Đăng ký thất bại, vui lòng thử lại')
     } finally {
       setLoading(false)
@@ -88,7 +92,6 @@ function Register() {
         </div>
       </div>
 
-      {/* Mật khẩu */}
       <div className="mb-4">
         <label className="block text-sm font-medium mb-1 text-[#1a1c1e]">Mật khẩu</label>
         <div className="flex items-center rounded-lg px-3 py-2.5 border border-[#70787d] bg-white">
@@ -97,12 +100,25 @@ function Register() {
             <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
           </svg>
           <input
-            type="password"
+            type={showPassword ? 'text' : 'password'}
             placeholder="••••••••"
             value={password}
             onChange={e => setPassword(e.target.value)}
             className="flex-1 outline-none text-sm bg-transparent text-[#1a1c1e] placeholder:text-[#70787d]"
           />
+          <button type="button" onClick={() => setShowPassword(v => !v)} className="ml-2 shrink-0">
+            {showPassword ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#70787d" strokeWidth="2">
+                <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#70787d" strokeWidth="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            )}
+          </button>
         </div>
       </div>
 
@@ -114,12 +130,25 @@ function Register() {
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
           </svg>
           <input
-            type="password"
+            type={showConfirmPassword ? 'text' : 'password'}
             placeholder="••••••••"
             value={confirmPassword}
             onChange={e => setConfirmPassword(e.target.value)}
             className="flex-1 outline-none text-sm bg-transparent text-[#1a1c1e] placeholder:text-[#70787d]"
           />
+          <button type="button" onClick={() => setShowConfirmPassword(v => !v)} className="ml-2 shrink-0">
+            {showConfirmPassword ? (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#70787d" strokeWidth="2">
+                <path d="M17.94 17.94A10.94 10.94 0 0 1 12 20c-7 0-11-8-11-8a18.5 18.5 0 0 1 5.06-5.94M9.9 4.24A10.94 10.94 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#70787d" strokeWidth="2">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+                <circle cx="12" cy="12" r="3"/>
+              </svg>
+            )}
+          </button>
         </div>
       </div>
 

@@ -10,6 +10,11 @@ export const pool = mysql.createPool({
   database: process.env.DB_NAME,
   waitForConnections: true,
   connectionLimit: 10,
+  // sửa — session MySQL thực tế chạy +07:00 (đã xác nhận qua NOW() vs
+  // UTC_TIMESTAMP()), không phải UTC. Khai 'Z' trước đây khiến driver hiểu
+  // sai nguồn gốc timestamp, gây lệch giờ khi convert sang JS Date — ảnh
+  // hưởng TOÀN BỘ cột DATETIME trong hệ thống, không riêng last_read_at
+  timezone: '+07:00',
 });
 
 export const testConnection = async () => {

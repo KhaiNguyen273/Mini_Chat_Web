@@ -21,10 +21,7 @@ export const rejectFriendRequestApi = (friendshipId: string) =>
     .put<{ data: CreateFriendshipResponse }>(`/friendships/${friendshipId}/reject`)
     .then((res) => res.data.data)
 
-export const blockFriendApi = (friendshipId: string) =>
-  axiosClient
-    .put<{ data: CreateFriendshipResponse }>(`/friendships/${friendshipId}/block`)
-    .then((res) => res.data.data)
+// blockFriendApi đã bị xoá — chặn giờ dùng block.api.ts (POST/DELETE /users/:id/block)
 
 export const removeFriendshipApi = (friendshipId: string) =>
   axiosClient.delete(`/friendships/${friendshipId}`)
@@ -37,7 +34,6 @@ export const getFriendRequestsApi = () =>
     .get<{ data: FriendRequest[] }>('/friendships/requests')
     .then((res) => res.data.data)
 
-// trả thẳng SearchedContact[] đã có relation sẵn, không cần map thêm
 export const searchUsersApi = (phone: string) =>
   axiosClient
     .get<{ data: SearchedContact[] }>('/users/search', { params: { phone } })

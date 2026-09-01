@@ -7,33 +7,44 @@ export interface ConversationMember {
   avatar_url?: string
   role: MemberRole
   joined_at: string
+  is_muted?: number | boolean
+  last_read_at?: string | null
+  is_online?: boolean
+  last_seen_at?: string | null // mới
 }
 
 export interface Conversation {
   id: string
   type: ConversationType
-  status: 'active' | 'pending' | 'rejected'
+  status: string
   created_by: string
   created_at: string
   updated_at: string
-  name: string           // đã tính sẵn ở BE — private: tên người kia, group: tên nhóm
-  avatar_url?: string    // đã tính sẵn tương tự
-  other_user_id: string | null  // chỉ có giá trị khi type = "private"
-  last_read_at?: string
-  muted?: boolean
+  name: string
+  avatar_url?: string
+  other_user_id: string | null
+  pinned_count: number
   last_message?: {
-    content: string
+    content: string | null
+    type: string
     sender_id: string
     created_at: string
   }
+  is_blocked_by_other: boolean
+  is_member: boolean
+  last_read_at?: string | null
+  is_online?: boolean
+  last_seen_at?: string | null // mới
+  member_avatars?: string[]
 }
 
 export interface CreateGroupPayload {
   name: string
   memberIds: string[]
+  avatar_url?: string | null
 }
 
 export interface UpdateConversationPayload {
   name?: string
-  avatar_url?: string
+  avatar_url?: string | null
 }

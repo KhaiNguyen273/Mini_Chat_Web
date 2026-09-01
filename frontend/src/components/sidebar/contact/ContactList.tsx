@@ -21,9 +21,10 @@ function ContactList({ list, selectedId, onSelect, loading }: ContactListProps) 
       {list.map((c) => (
         <ContactItem
           key={c.id}
+          id={c.id}
           name={c.name}
           avatar={c.avatar_url || DEFAULT_AVATAR_URL}
-          isActive={c.id === selectedId}
+          isActive={c.id == selectedId}
           onClick={() => onSelect(c)}
         />
       ))}

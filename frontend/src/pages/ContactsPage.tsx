@@ -1,15 +1,24 @@
+
+
+// export default ContactsPage
 import { useState, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import MainLayout from '../templates/MainLayout'
 import ContactsSidebar from '../components/sidebar/contact/ContactsSidebar'
 import ContactWindow from '../components/window/contact/ContactWindow'
 import { useFriendship } from '../hooks/useFriendship'
+import { useToast } from '../hooks/useToast'
 import { useDebounce } from '../hooks/useDebounce'
+import { getUserByIdApi } from '../api/user.api'
 import type { SearchedContact } from '../types/friendship.types'
 
 function ContactsPage() {
   const { searchContacts, friends, loading } = useFriendship()
+  const { showToast } = useToast()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [keyword, setKeyword] = useState('')
   const debouncedKeyword = useDebounce(keyword, 400)
+  const [skipNextDebounce, setSkipNextDebounce] = useState(false)
 
   const [results, setResults] = useState<SearchedContact[]>([])
   const [searching, setSearching] = useState(false)
@@ -28,10 +37,35 @@ function ContactsPage() {
         friendship_id: f.friendship_id,
       }))
 
-  const selected = displayList.find((c) => c.id === selectedId) || null
+  const selected = displayList.find((c) => c.id == selectedId) || null
 
-  // chưa chọn ai + đang xem danh sách bạn bè (không phải kết quả search)
-  // → tự chọn người đầu tiên trong danh sách
+  // xử lý ?userId= — gọi search TRỰC TIẾP, không chờ debounce, để chọn đúng ngay lập tức
+  useEffect(() => {
+    const userId = searchParams.get('userId')
+    if (!userId) return
+
+    getUserByIdApi(userId)
+      .then(async (user) => {
+        setSkipNextDebounce(true)
+        setKeyword(user.phone)
+        setSearching(true)
+        try {
+          const data = await searchContacts(user.phone)
+          setResults(data)
+          setSelectedId(userId)
+        } finally {
+          setSearching(false)
+        }
+      })
+      .catch(() => {
+        showToast('Không tìm thấy người dùng', 'error')
+      })
+      .finally(() => {
+        searchParams.delete('userId')
+        setSearchParams(searchParams, { replace: true })
+      })
+  }, [])
+
   useEffect(() => {
     if (!selectedId && !isSearching && !loading && displayList.length > 0) {
       setSelectedId(displayList[0].id)
@@ -39,6 +73,10 @@ function ContactsPage() {
   }, [selectedId, isSearching, loading, displayList])
 
   useEffect(() => {
+    if (skipNextDebounce) {
+      setSkipNextDebounce(false)
+      return
+    }
     if (!debouncedKeyword.trim()) {
       setResults([])
       return

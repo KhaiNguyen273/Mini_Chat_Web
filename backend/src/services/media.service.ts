@@ -8,15 +8,15 @@ export const listMedia = async (
   cursor: string | null,
   limit = 30
 ) => {
-  const isMember = await ConversationModel.isMember(conversationId, userId);
-  if (!isMember) throw new Error("Not a member of this conversation");
+  const wasMember = await ConversationModel.wasMember(conversationId, userId);
+  if (!wasMember) throw new Error("Not a member of this conversation");
 
   return MediaModel.listByConversation(conversationId, category, cursor, limit);
 };
 
 export const getMediaSummary = async (conversationId: number, userId: number) => {
-  const isMember = await ConversationModel.isMember(conversationId, userId);
-  if (!isMember) throw new Error("Not a member of this conversation");
+  const wasMember = await ConversationModel.wasMember(conversationId, userId);
+  if (!wasMember) throw new Error("Not a member of this conversation");
 
   const rows = await MediaModel.countByCategory(conversationId);
   const summary = { image: 0, video: 0, file: 0 };

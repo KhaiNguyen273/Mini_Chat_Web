@@ -14,8 +14,8 @@ export const createPrivate = async (req: AuthRequest, res: Response) => {
 
 export const createGroup = async (req: AuthRequest, res: Response) => {
   try {
-    const { name, memberIds } = req.body;
-    const conv = await ConversationService.createGroup(req.userId!, name, memberIds);
+    const { name, memberIds, avatar_url } = req.body;
+    const conv = await ConversationService.createGroup(req.userId!, name, memberIds, avatar_url || null);
     res.status(201).json({ data: conv });
   } catch (err: any) {
     res.status(400).json({ message: err.message });
@@ -27,9 +27,14 @@ export const list = async (req: AuthRequest, res: Response) => {
   res.json({ data: list });
 };
 
+// mới — danh sách lời mời nhắn tin đang chờ mình duyệt
+export const listPending = async (req: AuthRequest, res: Response) => {
+  const list = await ConversationService.listPending(req.userId!);
+  res.json({ data: list });
+};
+
 export const getOne = async (req: AuthRequest, res: Response) => {
   try {
-    // phải gọi qua service, KHÔNG gọi thẳng ConversationModel.findById
     const conv = await ConversationService.getConversation(Number(req.params.id), req.userId!);
     res.json({ data: conv });
   } catch (err: any) {
@@ -37,9 +42,29 @@ export const getOne = async (req: AuthRequest, res: Response) => {
   }
 };
 
+// mới — chấp nhận lời mời nhắn tin
+export const accept = async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await ConversationService.acceptPending(Number(req.params.id), req.userId!);
+    res.json({ data: result });
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
+// mới — từ chối lời mời nhắn tin
+export const reject = async (req: AuthRequest, res: Response) => {
+  try {
+    const result = await ConversationService.rejectPending(Number(req.params.id), req.userId!);
+    res.json({ data: result });
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
+};
+
 export const update = async (req: AuthRequest, res: Response) => {
   try {
-    const { name, avatar_url } = req.body;
+    const { name, avatar_url } = req.body; // undefined nếu không gửi field đó — đã xử lý đúng ở service
     const conv = await ConversationService.updateGroup(Number(req.params.id), req.userId!, name, avatar_url);
     res.json({ data: conv });
   } catch (err: any) {
@@ -59,7 +84,14 @@ export const addMember = async (req: AuthRequest, res: Response) => {
 
 export const removeMember = async (req: AuthRequest, res: Response) => {
   try {
-    await ConversationService.removeMember(Number(req.params.id), req.userId!, Number(req.params.userId));
+    const { newAdminId } = req.body || {}; // mới — optional, chỉ cần khi admin duy nhất tự rời
+    
+    await ConversationService.removeMember(
+      Number(req.params.id),
+      req.userId!,
+      Number(req.params.userId),
+      newAdminId ? Number(newAdminId) : undefined
+    );
     res.json({ message: "Member removed" });
   } catch (err: any) {
     res.status(400).json({ message: err.message });
@@ -83,8 +115,12 @@ export const mute = async (req: AuthRequest, res: Response) => {
 };
 
 export const markRead = async (req: AuthRequest, res: Response) => {
-  await ConversationService.markRead(Number(req.params.id), req.userId!);
-  res.json({ message: "Marked as read" });
+  try {
+    const result = await ConversationService.markRead(Number(req.params.id), req.userId!);
+    res.json({ data: result });
+  } catch (err: any) {
+    res.status(400).json({ message: err.message });
+  }
 };
 
 export const listMembers = async (req: AuthRequest, res: Response) => {
@@ -92,25 +128,14 @@ export const listMembers = async (req: AuthRequest, res: Response) => {
   res.json({ data: members });
 };
 
-export const listPending = async (req: AuthRequest, res: Response) => {
-  const data = await ConversationService.listPending(req.userId!);
+export const getMutualGroups = async (req: AuthRequest, res: Response) => {
+  const otherUserId = Number(req.params.userId);
+  const data = await ConversationService.getMutualGroups(req.userId!, otherUserId);
   res.json({ data });
 };
 
-export const accept = async (req: AuthRequest, res: Response) => {
-  try {
-    const data = await ConversationService.acceptPending(Number(req.params.id), req.userId!);
-    res.json({ data });
-  } catch (err: any) {
-    res.status(400).json({ message: err.message });
-  }
-};
-
-export const reject = async (req: AuthRequest, res: Response) => {
-  try {
-    const data = await ConversationService.rejectPending(Number(req.params.id), req.userId!);
-    res.json({ data });
-  } catch (err: any) {
-    res.status(400).json({ message: err.message });
-  }
+export const getPrivateId = async (req: AuthRequest, res: Response) => {
+  const otherUserId = Number(req.params.userId);
+  const conversationId = await ConversationService.findPrivateConversationId(req.userId!, otherUserId);
+  res.json({ data: { conversationId } }); // null nếu chưa từng nhắn tin
 };

@@ -2,13 +2,14 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { usePending } from '../../hooks/usePending'
 import { useAuth } from '../../hooks/useAuth'
 import { DEFAULT_AVATAR_URL } from '../../constants'
+import { useNotification } from '../../hooks/useNotification'
 
 function SidebarNav() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const { pendingList } = usePending()
   const { user } = useAuth()
-
+  const { unreadCount } = useNotification()
   
   
 
@@ -60,9 +61,14 @@ function SidebarNav() {
 
       <button
         onClick={() => navigate('/profile')}
-        className={`w-9 h-9 rounded-full overflow-hidden border-2 transition-all ${isActive('/profile') ? 'border-[#2563eb]' : 'border-transparent hover:border-[#70787d]'}`}
+        className={`relative w-9 h-9 rounded-full border-2 transition-all ${isActive('/profile') ? 'border-[#2563eb]' : 'border-transparent hover:border-[#70787d]'}`}
       >
-        <img src={user?.avatar_url||DEFAULT_AVATAR_URL} alt="avatar" className="w-full h-full object-cover"/>
+        <div className="w-full h-full rounded-full overflow-hidden">
+          <img src={user?.avatar_url||DEFAULT_AVATAR_URL} alt="avatar" className="w-full h-full object-cover"/>
+        </div>
+        {unreadCount > 0 && (
+          <span className="absolute top-0 right-0 w-2.5 h-2.5 bg-[#ba1a1a] rounded-full border-2 border-white"/>
+        )}
       </button>
     </div>
   )

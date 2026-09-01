@@ -21,7 +21,7 @@ export const findByPhone = async (phone: string) => {
 
 export const findById = async (id: number) => {
   const [rows] = await pool.query<User[]>(
-    "SELECT id, phone, name, bio, avatar_url FROM users WHERE id = ? AND is_deleted = false",
+    "SELECT id, phone, name, bio, avatar_url, last_seen_at FROM users WHERE id = ? AND is_deleted = false",
     [id]
   );
   return rows[0] || null;
@@ -68,4 +68,8 @@ export const searchByPhone = async (phone: string, currentUserId: number) => {
     [currentUserId, currentUserId, `%${phone}%`, currentUserId]
   );
   return rows;
+};
+
+export const updateLastSeen = async (userId: number) => {
+  await pool.query("UPDATE users SET last_seen_at = NOW() WHERE id = ?", [userId]);
 };

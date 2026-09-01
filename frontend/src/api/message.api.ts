@@ -7,22 +7,28 @@ export interface GetMessagesResult {
   nextCursor: string | null // created_at của tin cuối cùng, dùng cho lần load tiếp theo
 }
 
+// message.api.ts — sửa getMessagesApi, ép id về string ngay khi nhận response
 export const getMessagesApi = async (
   conversationId: string,
   cursor?: string,
-  limit = 30
+  limit = 30,
+  q?: string
 ): Promise<GetMessagesResult> => {
-  const res = await axiosClient.get<{ data: Message[] }>(
+  const res = await axiosClient.get<{ data: any[] }>(
     `/conversations/${conversationId}/messages`,
-    { params: { cursor, limit } }
+    { params: { cursor, limit, q } }
   )
-  const messages = res.data.data
-  // hết dữ liệu khi trả về ít hơn limit
-  const nextCursor =
-    messages.length < limit ? null : messages[messages.length - 1]?.created_at || null
+  const messages: Message[] = res.data.data.map((m) => ({
+    ...m,
+    id: String(m.id),
+    sender_id: String(m.sender_id),
+  }))
+  const nextCursor = messages.length < limit ? null : messages[messages.length - 1]?.created_at || null
+
   return { messages, nextCursor }
 }
 
+// message.api.ts — sendMessageApi cũng cần ép kiểu tương tự
 export const sendMessageApi = (
   conversationId: string,
   content: string,
@@ -35,8 +41,12 @@ export const sendMessageApi = (
   files.forEach((f) => formData.append('files', f))
 
   return axiosClient
-    .post<{ data: Message }>(`/conversations/${conversationId}/messages/upload`, formData)
-    .then((res) => res.data.data)
+    .post<{ data: any }>(`/conversations/${conversationId}/messages/upload`, formData)
+    .then((res) => ({
+      ...res.data.data,
+      id: String(res.data.data.id),
+      sender_id: String(res.data.data.sender_id),
+    }))
 }
 
 export const deleteMessageApi = (messageId: string) =>
@@ -52,3 +62,23 @@ export const getMessageReadsApi = (messageId: string) =>
   axiosClient
     .get<{ data: MessageReadBy[] }>(`/messages/${messageId}/reads`)
     .then((res) => res.data.data)
+
+export const getMessageByIdApi = (messageId: string) =>
+  axiosClient.get<{ data: any }>(`/messages/${messageId}`).then((res) => ({
+    ...res.data.data,
+    id: String(res.data.data.id),
+    conversation_id: String(res.data.data.conversation_id),
+    sender_id: String(res.data.data.sender_id),
+  }))
+
+export const getMessagesAfterApi = async (conversationId: string, after: string, limit = 15) => {
+  const res = await axiosClient.get<{ data: any[] }>(
+    `/conversations/${conversationId}/messages/after`,
+    { params: { after, limit } }
+  )
+  return res.data.data.map((m) => ({
+    ...m,
+    id: String(m.id),
+    sender_id: String(m.sender_id),
+  })) as Message[]
+}

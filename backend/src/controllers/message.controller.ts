@@ -23,7 +23,14 @@ export const list = async (req: AuthRequest, res: Response) => {
   try {
     const cursor = (req.query.cursor as string) || null;
     const limit = Number(req.query.limit) || 30;
-    const messages = await MessageService.getMessages(Number(req.params.id), req.userId!, cursor, limit);
+    const q = (req.query.q as string) || null;
+    const messages = await MessageService.getMessages(
+      Number(req.params.id),
+      req.userId!,
+      cursor,
+      limit,
+      q
+    );
     res.json({ data: messages });
   } catch (err: any) {
     res.status(403).json({ message: err.message });
@@ -91,5 +98,26 @@ export const sendWithFiles = async (req: AuthRequest, res: Response) => {
     res.status(201).json({ data: message });
   } catch (err: any) {
     res.status(400).json({ message: err.message });
+  }
+};
+
+export const getOne = async (req: AuthRequest, res: Response) => {
+  try {
+    const message = await MessageService.getMessageById(Number(req.params.id), req.userId!);
+    res.json({ data: message });
+  } catch (err: any) {
+    const status = err.message === "Message not found" ? 404 : 403;
+    res.status(status).json({ message: err.message });
+  }
+};
+
+export const listAfter = async (req: AuthRequest, res: Response) => {
+  try {
+    const after = req.query.after as string;
+    const limit = Number(req.query.limit) || 15;
+    const messages = await MessageService.getMessagesAfter(Number(req.params.id), req.userId!, after, limit);
+    res.json({ data: messages });
+  } catch (err: any) {
+    res.status(403).json({ message: err.message });
   }
 };

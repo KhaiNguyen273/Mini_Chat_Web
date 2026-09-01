@@ -14,7 +14,7 @@ export const pin = async (req: AuthRequest, res: Response) => {
 
 export const unpin = async (req: AuthRequest, res: Response) => {
   try {
-    await PinService.unpinMessage(Number(req.params.id), Number(req.params.messageId), req.userId!);
+    await PinService.unpinMessage(Number(req.params.id), Number(req.params.messageId), req.userId!);  
     res.json({ message: "Unpinned" });
   } catch (err: any) {
     res.status(400).json({ message: err.message });

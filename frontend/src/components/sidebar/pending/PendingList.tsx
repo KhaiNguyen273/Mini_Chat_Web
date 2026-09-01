@@ -2,6 +2,7 @@
 import PendingItem from "./PendingItem"
 import type { Conversation } from '../../../types/conversation.types'
 import { DEFAULT_AVATAR_URL } from "../../../constants"
+import { getLastMessagePreview } from "../../../utils/messagePreview"
 
 interface PendingListProps {
   list: Conversation[]
@@ -27,7 +28,7 @@ function PendingList({ list, loading, selectedId, onSelect }: PendingListProps) 
             <div key={c.id} onClick={() => onSelect(c.id)}>
               <PendingItem
                 name={c.name}
-                lastMessage={c.last_message?.content || ''}
+                lastMessage={getLastMessagePreview(c.last_message)}
                 time={c.last_message?.created_at || ''}
                 avatar={c.avatar_url || DEFAULT_AVATAR_URL}
                 isActive={c.id === selectedId}

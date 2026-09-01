@@ -12,6 +12,7 @@ export interface Notification {
   type: NotificationType
   reference_id: string
   reference_type: string
+  conversation_id: string | null // mới
   is_read: boolean
   created_at: string
   preview: string

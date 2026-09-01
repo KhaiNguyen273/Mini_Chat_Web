@@ -33,7 +33,7 @@ export const remove = async (id: number) => {
 
 export const listFriends = async (userId: number) => {
   const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT u.id, u.name, u.avatar_url, f.id as friendship_id
+    `SELECT u.id, u.name, u.avatar_url, u.last_seen_at, f.id as friendship_id
      FROM friendships f
      JOIN users u ON u.id = CASE WHEN f.requester_id = ? THEN f.receiver_id ELSE f.requester_id END
      WHERE (f.requester_id = ? OR f.receiver_id = ?) AND f.status = 'accepted'`,

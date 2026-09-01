@@ -1,11 +1,13 @@
 import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { DEFAULT_AVATAR_URL } from '../../constants'
+import { useNotification } from '../../hooks/useNotification'
 
 function ProfileSidebar() {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const { logout, user } = useAuth()
+  const { unreadCount } = useNotification()
 
   const menu = [
     {
@@ -48,14 +50,17 @@ function ProfileSidebar() {
           <button
             key={item.path}
             onClick={() => navigate(item.path)}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors w-full text-left ${
+            className={`relative flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors w-full text-left ${
               pathname === item.path
                 ? 'bg-[#ecf0f3] text-[#1a1c1e]'
                 : 'hover:bg-[#f2f4f6] text-[#565f71]'
             }`}
           >
-            <span className={pathname === item.path ? 'text-[#2563eb]' : 'text-[#565f71]'}>
+            <span className={`relative ${pathname === item.path ? 'text-[#2563eb]' : 'text-[#565f71]'}`}>
               {item.icon}
+              {item.path === '/profile/notifications' && unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 bg-[#ba1a1a] rounded-full"/>
+              )}
             </span>
             {item.label}
           </button>

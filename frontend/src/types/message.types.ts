@@ -1,5 +1,4 @@
-// src/types/message.types.ts
-export type MessageType = 'text' | 'image' | 'file'
+export type MessageType = 'text' | 'image' | 'file' | 'system'
 
 export interface Attachment {
   file_url: string
@@ -17,6 +16,7 @@ export interface Message {
   attachments: Attachment[]
   created_at: string
   updated_at?: string
+  is_deleted?: boolean // mới
 }
 
 export interface MessageReadBy {

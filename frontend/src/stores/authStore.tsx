@@ -4,6 +4,7 @@ import axios from 'axios'
 import type { User, LoginPayload, RegisterPayload } from '../types/auth.types'
 import { loginApi, logoutApi, registerApi, getMeApi } from '../api/auth.api'
 import { setAccessToken, clearAccessToken } from '../utils/tokenStorage'
+import { connectSocket, disconnectSocket } from '../socket/socketClient'
 
 interface AuthContextValue {
   user: User | null
@@ -28,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .post(`${BASE_URL}/auth/refresh`, {}, { withCredentials: true })
       .then(async (res) => {
         setAccessToken(res.data.data.accessToken)
+        connectSocket()
         const me = await getMeApi()
         setUser(me)
       })
@@ -40,7 +42,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (payload: LoginPayload) => {
     const data = await loginApi(payload)
     setAccessToken(data.accessToken)
-    const fullUser = await getMeApi() 
+    connectSocket()
+    const fullUser = await getMeApi()
     setUser(fullUser)
   }
 
@@ -51,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     try { await logoutApi() } catch { /* ignore */ }
     clearAccessToken()
+    disconnectSocket()
     setUser(null)
   }
 

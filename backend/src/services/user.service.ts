@@ -1,10 +1,12 @@
 import bcrypt from "bcrypt";
 import * as UserModel from "../models/user.model";
+import * as BlockModel from "../models/block.model";
+import { isUserOnline } from "../sockets/presence";
 
 export const getProfile = async (id: number) => {
   const user = await UserModel.findById(id);
   if (!user) throw new Error("User not found");
-  return user;
+  return { ...user, is_online: isUserOnline(id) };
 };
 
 export const updateProfile = async (id: number, data: { name: string; bio: string; avatar_url: string }) => {
@@ -28,28 +30,31 @@ export const deleteAccount = async (id: number) => {
 export const searchUsers = async (phone: string, currentUserId: number) => {
   const rows = await UserModel.searchByPhone(phone, currentUserId);
 
-  return rows.map((row: any) => {
-    let relation: string;
+  const results = [];
+  for (const row of rows as any[]) {
+    const blocked = await BlockModel.isBlockedEitherWay(currentUserId, row.id);
 
-    if (!row.friendship_id) {
+    let relation: string;
+    if (blocked) {
+      relation = "blocked";
+    } else if (!row.friendship_id) {
       relation = "none";
     } else if (row.friendship_status === "accepted") {
       relation = "friend";
-    } else if (row.friendship_status === "blocked") {
-      relation = "blocked";
     } else if (row.friendship_status === "pending") {
       relation = row.friendship_requester_id === currentUserId ? "pending_sent" : "pending_received";
     } else {
       relation = "none";
     }
 
-    return {
+    results.push({
       id: row.id,
       phone: row.phone,
       name: row.name,
       avatar_url: row.avatar_url,
       relation,
       friendship_id: row.friendship_id ? String(row.friendship_id) : null,
-    };
-  });
+    });
+  }
+  return results;
 };

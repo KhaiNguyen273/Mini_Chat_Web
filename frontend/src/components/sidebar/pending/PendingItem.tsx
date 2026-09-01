@@ -6,7 +6,7 @@ interface PendingItemProps {
   isActive?: boolean
 }
 
-function PendingItem({ name, lastMessage, time, avatar, isActive }: PendingItemProps) {
+function PendingItem({ name, lastMessage, avatar, isActive }: PendingItemProps) {
   return (
     <div className={`flex items-center gap-3 px-3 py-2.5 rounded-xl cursor-pointer hover:bg-[#f2f4f6] ${isActive ? 'bg-[#ecf0f3]' : ''}`}>
       <div className="relative shrink-0">
