@@ -18,24 +18,15 @@ import { useIsMobile } from '../hooks/useIsMobile'
 
 function ChatPage() {
   const { conversationId } = useParams()
-  const [showInfo, setShowInfo] = useState(true)
 
   return (
     <MainLayout>
-      <ChatPageInner
-        conversationId={conversationId}
-        showInfo={showInfo}
-        onToggleInfo={() => setShowInfo((prev) => !prev)}
-      />
+      <ChatPageInner conversationId={conversationId} />
     </MainLayout>
   )
 }
 
-function ChatPageInner({ conversationId, showInfo, onToggleInfo }: {
-  conversationId?: string
-  showInfo: boolean
-  onToggleInfo: () => void
-}) {
+function ChatPageInner({ conversationId }: { conversationId?: string }) {
   const navigate = useNavigate()
   const { conversations, loading } = useConversationContext()
   const isMobile = useIsMobile()
@@ -60,8 +51,6 @@ function ChatPageInner({ conversationId, showInfo, onToggleInfo }: {
           <ChatPageContent
             key={conversationId}
             conversationId={conversationId}
-            showInfo={showInfo}
-            onToggleInfo={onToggleInfo}
             onBack={() => navigate('/chat')}
           />
         ) : (
@@ -75,11 +64,9 @@ function ChatPageInner({ conversationId, showInfo, onToggleInfo }: {
 }
 
 function ChatPageContent({
-  conversationId, showInfo, onToggleInfo, onBack,
+  conversationId, onBack,
 }: {
   conversationId: string
-  showInfo: boolean
-  onToggleInfo: () => void
   onBack: () => void
 }) {
   const { user } = useAuth()
@@ -92,6 +79,18 @@ function ChatPageContent({
   const highlightParam = searchParams.get('highlight')
   const { markOnOpen, markOnActiveAction } = useMarkAsRead(conversationId)
   const processedHighlightRef = useRef<string | null>(null)
+  const isMobile = useIsMobile()
+
+  // MỚI — showInfo giờ khởi tạo NGAY TẠI ĐÂY. ChatPageContent remount hoàn
+  // toàn mỗi khi conversationId đổi (nhờ key={conversationId} ở component
+  // cha), nên state tự reset về đúng mặc định mỗi lần vào 1 conversation
+  // khác — không còn "rò rỉ" trạng thái đã mở info từ conversation trước
+  // sang conversation sau. Trước đây showInfo nằm ở ChatPage (không remount
+  // theo conversationId) nên trên mobile, nếu từng bấm mở info ở
+  // conversation A, chuyển sang conversation B sẽ lập tức bị đè bởi overlay
+  // thông tin full-screen — đúng hiện tượng "tuỳ lúc" bị nhảy sang info.
+  const [showInfo, setShowInfo] = useState(!isMobile)
+  const onToggleInfo = () => setShowInfo((prev) => !prev)
 
   const { blockedList, blockUser, unblockUser } = useBlock()
   const confirm = useConfirm()
@@ -105,11 +104,6 @@ function ChatPageContent({
     markOnOpen()
   }, [markOnOpen])
 
-  // đang mở sẵn conversation này mà có tin nhắn mới tới (không phải do
-  // chính mình gửi) -> đánh dấu ĐÃ ĐỌC CONVERSATION ngay lập tức. Đây là
-  // effect DUY NHẤT xử lý việc này — trước đó có 1 bản cũ trùng lặp dùng
-  // chung lastMessageIdRef, khiến 2 effect dẫm chân nhau và bug "phải đợi
-  // tin thứ 2 mới đọc tin thứ 1" không bao giờ thực sự được fix
   const initializedRef = useRef(false)
   const lastMessageIdRef = useRef<string | null>(null)
 
@@ -133,8 +127,6 @@ function ChatPageContent({
 
     markConversationAsRead(conversationId).catch(() => {})
   }, [messageState.messages, messageState.loading, user, markConversationAsRead, conversationId])
-
-  // ĐÃ XOÁ — effect cũ trùng lặp dùng isFirstRun = lastMessageIdRef.current === null
 
   const handleToggleBlock = async () => {
     if (!otherUserId) return
@@ -204,7 +196,7 @@ function ChatPageContent({
     setTimeout(() => setHighlightMessageId(null), 2000)
   }
 
-   return (
+  return (
     <>
       <ChatWindow
         conversationId={conversationId}

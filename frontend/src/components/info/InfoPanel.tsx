@@ -112,6 +112,11 @@ function InfoPanel({ conversationId, detail, isBlocked, onToggleBlock, onJumpToM
     }
   }, [conversationId])
 
+  const handleJumpAndClose = (messageId: string, createdAt: string) => {
+    onJumpToMessage(messageId, createdAt)
+    onClose?.()
+  }
+
   if (view === 'media') return <MediaFilePanel conversationId={conversationId} onBack={() => setView('main')} />
   if (view === 'search') return <MessageSearchPanel conversationId={conversationId} onBack={() => setView('main')} onJumpToMessage={onJumpToMessage} />
 
@@ -302,7 +307,11 @@ function InfoPanel({ conversationId, detail, isBlocked, onToggleBlock, onJumpToM
       </InfoSection>
 
       {showPins && (
-        <PinnedMessagesModal conversationId={conversationId} onClose={() => setShowPins(false)} onJumpToMessage={onJumpToMessage} />
+        <PinnedMessagesModal
+          conversationId={conversationId}
+          onClose={() => setShowPins(false)}
+          onJumpToMessage={handleJumpAndClose}
+        />
       )}
 
       {showAssignAdmin && (
