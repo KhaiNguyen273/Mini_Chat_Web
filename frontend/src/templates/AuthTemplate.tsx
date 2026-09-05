@@ -6,8 +6,8 @@ interface AuthTemplateProps {
 
 function AuthTemplate({ children }: AuthTemplateProps) {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#e8eef7] to-[#f7f9fb]">
-      <div className="w-full max-w-sm rounded-2xl shadow-lg p-8 bg-white">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#e8eef7] to-[#f7f9fb] px-4">
+      <div className="w-full max-w-sm rounded-2xl shadow-lg p-6 sm:p-8 bg-white">
         {/* Logo */}
         <div className="flex flex-col items-center mb-6">
           <div className="w-14 h-14 rounded-2xl flex items-center justify-center mb-3 bg-[#2563eb]">

@@ -4,7 +4,6 @@ import { useToast } from '../../hooks/useToast'
 import { useNavigate } from 'react-router-dom'
 import InfoHeader from './InfoHeader'
 import InfoSection from './InfoSection'
-import PinnedMessagesModal from './PinnedMessagesModal'
 import MediaFilePanel from './MediaFilePanel'
 import type { ConversationDetail } from '../../hooks/useConversationDetail'
 import PinIcon from '../ui/PinIcon'
@@ -14,6 +13,8 @@ import type { MediaItem } from '../../types/media.types'
 import { useConversationContext } from '../../contexts/ConversationContext'
 import { useConfirm } from '../../hooks/useConfirm'
 import AssignAdminModal from './AssignAdminModal'
+import { getSocket } from '../../socket/socketClient'
+import PinnedMessagesModal from './PinnedMessagesModal'
 
 interface InfoPanelProps {
   conversationId: string
@@ -21,9 +22,10 @@ interface InfoPanelProps {
   isBlocked: boolean
   onToggleBlock: () => void
   onJumpToMessage: (messageId: string, createdAt: string) => void
+  onClose?: () => void
 }
 
-function InfoPanel({ conversationId, detail, isBlocked, onToggleBlock, onJumpToMessage }: InfoPanelProps) {
+function InfoPanel({ conversationId, detail, isBlocked, onToggleBlock, onJumpToMessage, onClose }: InfoPanelProps) {
   const { user } = useAuth()
   const [showAssignAdmin, setShowAssignAdmin] = useState(false)
   const { toggleMute, updateConversation, removeMember, removeConversationLocally, conversations } = useConversationContext()
@@ -64,12 +66,54 @@ function InfoPanel({ conversationId, detail, isBlocked, onToggleBlock, onJumpToM
       .finally(() => setLoadingPreview(false))
   }, [conversationId])
 
-  if (view === 'media') {
-    return <MediaFilePanel conversationId={conversationId} onBack={() => setView('main')} />
-  }
-  if (view === 'search') {
-    return <MessageSearchPanel conversationId={conversationId} onBack={() => setView('main')} onJumpToMessage={onJumpToMessage} />
-  }
+  useEffect(() => {
+    setLoadingPreview(true)
+    getMediaListApi(conversationId)
+      .then(setPreviewMedia)
+      .finally(() => setLoadingPreview(false))
+  }, [conversationId])
+
+  // MỚI — tin đính kèm bị thu hồi — refetch preview
+  useEffect(() => {
+    const socket = getSocket()
+    if (!socket) return
+
+    const handleMediaChanged = ({ conversationId: cid }: { conversationId: number }) => {
+      if (String(cid) !== conversationId) return
+      getMediaListApi(conversationId).then(setPreviewMedia)
+    }
+
+    socket.on('conversation:media-changed', handleMediaChanged)
+    return () => { socket.off('conversation:media-changed', handleMediaChanged) }
+  }, [conversationId])
+
+
+  useEffect(() => {
+    const socket = getSocket()
+    if (!socket) return
+
+    const refetchPreview = () => getMediaListApi(conversationId).then(setPreviewMedia)
+
+    const handleDeleted = ({ conversationId: cid }: { conversationId: number }) => {
+      if (String(cid) !== conversationId) return
+      refetchPreview()
+    }
+    const handleNewMessage = (msg: any) => {
+      if (String(msg.conversation_id) !== conversationId) return
+      if (!msg.attachments || msg.attachments.length === 0) return
+      refetchPreview()
+    }
+
+    socket.on('message:deleted', handleDeleted)
+    socket.on('message:new', handleNewMessage)
+    return () => {
+      socket.off('message:deleted', handleDeleted)
+      socket.off('message:new', handleNewMessage)
+    }
+  }, [conversationId])
+
+  if (view === 'media') return <MediaFilePanel conversationId={conversationId} onBack={() => setView('main')} />
+  if (view === 'search') return <MessageSearchPanel conversationId={conversationId} onBack={() => setView('main')} onJumpToMessage={onJumpToMessage} />
 
   const handleToggleMute = async () => {
     const next = !muted
@@ -131,8 +175,18 @@ function InfoPanel({ conversationId, detail, isBlocked, onToggleBlock, onJumpToM
 
   const remainingCount = previewMedia.length - PREVIEW_LIMIT
 
+  
+
   return (
-    <div className="flex flex-col w-72 shrink-0 h-full bg-white border-l border-[#e6ebef] overflow-y-auto">
+    <div className="flex flex-col w-full md:w-72 shrink-0 h-full bg-white border-l border-[#e6ebef] overflow-y-auto">
+      {onClose && (
+        <div className="flex items-center gap-2 px-4 py-3 border-b border-[#e6ebef] md:hidden">
+          <button onClick={onClose} className="w-8 h-8 rounded-full hover:bg-[#f2f4f6] flex items-center justify-center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1c1e" strokeWidth="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+          </button>
+          <span className="text-sm font-semibold text-[#1a1c1e]">Thông tin đoạn chat</span>
+        </div>
+      )}
       <InfoHeader
         conversationId={conversationId}
         detail={detail}
@@ -247,7 +301,9 @@ function InfoPanel({ conversationId, detail, isBlocked, onToggleBlock, onJumpToM
         </div>
       </InfoSection>
 
-      {showPins && <PinnedMessagesModal conversationId={conversationId} onClose={() => setShowPins(false)} />}
+      {showPins && (
+        <PinnedMessagesModal conversationId={conversationId} onClose={() => setShowPins(false)} onJumpToMessage={onJumpToMessage} />
+      )}
 
       {showAssignAdmin && (
         <AssignAdminModal

@@ -37,7 +37,12 @@ function Register() {
       await register({ phone, password, name })
       navigate('/login')
     } catch (err: any) {
-      setError(err.response?.data?.message || 'Đăng ký thất bại, vui lòng thử lại')
+      const msg = err.response?.data?.message
+      if (msg === 'Phone already registered') {
+        setError('Số điện thoại này đã được đăng ký')
+      } else {
+        setError(msg || 'Đăng ký thất bại, vui lòng thử lại')
+      }
     } finally {
       setLoading(false)
     }

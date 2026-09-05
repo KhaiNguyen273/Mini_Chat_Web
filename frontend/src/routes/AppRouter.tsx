@@ -10,6 +10,7 @@ import ProfileDetails from '../components/profile/ProfileDetails'
 import ProfileSecurity from '../components/profile/ProfileSecurity'
 import ProfileNotification from '../components/profile/ProfileNotification'
 import ProtectedRoute from './ProtectedRoute'
+import ProfileBlocked from '../components/profile/ProfileBlocked'
 
 function AppRouter() {
   return (
@@ -29,6 +30,7 @@ function AppRouter() {
             <Route index element={<ProfileDetails />} />
             <Route path="security" element={<ProfileSecurity />} />
             <Route path="notifications" element={<ProfileNotification />} />
+            <Route path="blocked" element={<ProfileBlocked />} />
           </Route>
         </Route>
 

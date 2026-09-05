@@ -118,6 +118,7 @@ export function useConversationDetail(conversationId: string) {
     return () => { socket.off('conversation:role-changed', handleRoleChanged) }
   }, [conversationId])
 
+
   const displayName = conversation?.name || 'Đang tải...'
   const displayAvatar = conversation?.avatar_url||DEFAULT_AVATAR_URL
 

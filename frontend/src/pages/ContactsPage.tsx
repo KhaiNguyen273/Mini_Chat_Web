@@ -11,14 +11,16 @@ import { useToast } from '../hooks/useToast'
 import { useDebounce } from '../hooks/useDebounce'
 import { getUserByIdApi } from '../api/user.api'
 import type { SearchedContact } from '../types/friendship.types'
+import { useIsMobile } from '../hooks/useIsMobile'
 
 function ContactsPage() {
-  const { searchContacts, friends, loading } = useFriendship()
+  const { searchContacts, friends, loading, refetchFriends } = useFriendship()
   const { showToast } = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
   const [keyword, setKeyword] = useState('')
   const debouncedKeyword = useDebounce(keyword, 400)
   const [skipNextDebounce, setSkipNextDebounce] = useState(false)
+  const isMobile = useIsMobile()
 
   const [results, setResults] = useState<SearchedContact[]>([])
   const [searching, setSearching] = useState(false)
@@ -99,6 +101,13 @@ function ContactsPage() {
     }
   }
 
+  useEffect(() => {
+    if (isMobile) return
+    if (!selectedId && !isSearching && !loading && displayList.length > 0) {
+      setSelectedId(displayList[0].id)
+    }
+  }, [selectedId, isSearching, loading, displayList, isMobile])
+
   return (
     <MainLayout>
       <ContactsSidebar
@@ -107,8 +116,16 @@ function ContactsPage() {
         onSelect={(c) => setSelectedId(c.id)}
         onSearch={setKeyword}
         loading={isSearching ? searching : loading}
+        className={selectedId ? 'hidden' : 'flex'}
       />
-      <ContactWindow contact={selected} onUpdateContact={updateContact} />
+      <div className={`${selectedId ? 'flex' : 'hidden'} md:flex flex-1 min-w-0`}>
+        <ContactWindow
+          contact={selected}
+          onUpdateContact={updateContact}
+          onFriendsChanged={refetchFriends}
+          onBack={() => setSelectedId(null)}
+        />
+      </div>
     </MainLayout>
   )
 }

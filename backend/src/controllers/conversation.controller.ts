@@ -139,3 +139,10 @@ export const getPrivateId = async (req: AuthRequest, res: Response) => {
   const conversationId = await ConversationService.findPrivateConversationId(req.userId!, otherUserId);
   res.json({ data: { conversationId } }); // null nếu chưa từng nhắn tin
 };
+
+export const search = async (req: AuthRequest, res: Response) => {
+  const q = ((req.query.q as string) || '').trim();
+  if (!q) return res.json({ data: [] });
+  const data = await ConversationService.searchConversations(req.userId!, q);
+  res.json({ data });
+};

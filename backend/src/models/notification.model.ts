@@ -1,6 +1,23 @@
 import { pool } from "../config/db";
 import { RowDataPacket, ResultSetHeader } from "mysql2";
 
+// export const create = async (
+//   userId: number,
+//   actorId: number,
+//   type: string,
+//   referenceId: number | null,
+//   referenceType: string | null,
+//   preview: string | null,
+//   conversationId: number | null // mới
+// ) => {
+//   const [result] = await pool.query<ResultSetHeader>(
+//     `INSERT INTO notifications (user_id, actor_id, type, reference_id, reference_type, preview, conversation_id) 
+//      VALUES (?, ?, ?, ?, ?, ?, ?)`,
+//     [userId, actorId, type, referenceId, referenceType, preview, conversationId]
+//   );
+//   return result.insertId;
+// };
+
 export const create = async (
   userId: number,
   actorId: number,
@@ -8,13 +25,21 @@ export const create = async (
   referenceId: number | null,
   referenceType: string | null,
   preview: string | null,
-  conversationId: number | null // mới
+  conversationId: number | null
 ) => {
   const [result] = await pool.query<ResultSetHeader>(
     `INSERT INTO notifications (user_id, actor_id, type, reference_id, reference_type, preview, conversation_id) 
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+     VALUES (?, ?, ?, ?, ?, ?, ?)
+     ON DUPLICATE KEY UPDATE
+       id = LAST_INSERT_ID(id),
+       actor_id = VALUES(actor_id),
+       preview = VALUES(preview),
+       conversation_id = VALUES(conversation_id),
+       is_read = 0,
+       created_at = CURRENT_TIMESTAMP`,
     [userId, actorId, type, referenceId, referenceType, preview, conversationId]
   );
+
   return result.insertId;
 };
 

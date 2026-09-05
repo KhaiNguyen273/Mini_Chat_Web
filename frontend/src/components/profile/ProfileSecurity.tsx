@@ -11,16 +11,20 @@ function ProfileSecurity() {
   const {showToast} = useToast()
 
   const handleChange = async () => {
-  if (!current || !newPass || !confirm) return
-  if (newPass !== confirm) return showToast('Mật khẩu xác nhận không khớp!','info')
-  try {
-    await changePassword({ oldPassword: current, newPassword: newPass })
-    setCurrent(''); setNewPass(''); setConfirm('')
-    showToast('Đổi mật khẩu thành công','success')
-  } catch {
-    showToast('Đổi mật khẩu thất bại','error')
+    if (!current || !newPass || !confirm) return
+    if (newPass !== confirm) return showToast('Mật khẩu xác nhận không khớp!', 'info')
+    if (newPass === current) return showToast('Mật khẩu mới phải khác mật khẩu hiện tại', 'info')
+    try {
+      await changePassword({ oldPassword: current, newPassword: newPass })
+      setCurrent(''); setNewPass(''); setConfirm('')
+      showToast('Đổi mật khẩu thành công', 'success')
+    } catch (err: any) {
+      const msg = err.response?.data?.message
+      if (msg === 'Old password incorrect') showToast('Mật khẩu hiện tại không đúng', 'error')
+      else if (msg === 'New password must be different from old password') showToast('Mật khẩu mới phải khác mật khẩu hiện tại', 'error')
+      else showToast('Đổi mật khẩu thất bại', 'error')
+    }
   }
-}
 
   return (
     <div className="flex flex-col flex-1 h-full bg-[#f7f9fb] overflow-y-auto">

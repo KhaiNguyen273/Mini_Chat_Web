@@ -7,12 +7,12 @@ import * as NotificationService from "./notification.service";
 import { getIO } from "../sockets/io-registry";
 import { isUserOnline } from "../sockets/presence";
 
+const DEACTIVATED_NAME = 'Tài khoản đã vô hiệu hóa';
+
 function mapConversationRow(row: any) {
   const isPrivate = row.type === "private";
+  const otherDeactivated = isPrivate && !!row.other_user_is_deleted;
 
-  // MỚI — tối đa 2 avatar đầu tiên theo joined_at tăng dần, CHỈ áp dụng cho
-  // group. avatar_url có thể null (user chưa set avatar) -> lọc bỏ trước khi
-  // trả về, tránh mảng có phần tử null làm FE render vỡ collage
   const member_avatars = !isPrivate && row.member_avatars_raw
     ? String(row.member_avatars_raw).split("||").filter((url: string) => url && url !== "null")
     : undefined;
@@ -24,9 +24,10 @@ function mapConversationRow(row: any) {
     created_by: row.created_by,
     created_at: row.created_at,
     updated_at: row.updated_at,
-    name: isPrivate ? row.other_user_name : row.group_name,
-    avatar_url: isPrivate ? row.other_user_avatar_url : row.group_avatar_url,
+    name: isPrivate ? (otherDeactivated ? DEACTIVATED_NAME : row.other_user_name) : row.group_name,
+    avatar_url: isPrivate ? (otherDeactivated ? null : row.other_user_avatar_url) : row.group_avatar_url,
     other_user_id: isPrivate ? row.other_user_id : null,
+    other_user_deactivated: otherDeactivated, // MỚI
     pinned_count: Number(row.pinned_count) || 0,
     last_message: row.last_message_content !== null || row.last_message_type
       ? {
@@ -37,7 +38,11 @@ function mapConversationRow(row: any) {
         }
       : null,
     last_read_at: row.my_last_read_at,
-    member_avatars, // MỚI — chỉ có mặt (không phải undefined) khi type === 'group'
+    // MỚI — is_member tính từ removed_at của chính mình. Trước đây field
+    // này không tồn tại nên FE mặc định luôn true, khiến input chat hiện
+    // lại sau F5 dù đã bị kick
+    is_member: row.my_removed_at == null,
+    member_avatars,
   };
 }
 
@@ -141,7 +146,16 @@ export const createGroup = async (
 
 export const listConversations = async (userId: number) => {
   const rows = await ConversationModel.listForUser(userId);
-  return rows.map(mapConversationRow);
+  const mapped = rows.map(mapConversationRow);
+  for (const conv of mapped) {
+    if (!conv.is_member) {
+      const lastVisible = await ConversationModel.findLastVisibleMessage(conv.id, userId);
+      (conv as any).last_message = lastVisible
+        ? { content: lastVisible.content, type: lastVisible.type, sender_id: lastVisible.sender_id, created_at: lastVisible.created_at }
+        : null;
+    }
+  }
+  return mapped;
 };
 
 export const listPending = async (userId: number) => {
@@ -156,19 +170,21 @@ export const getConversation = async (id: number, userId: number) => {
   const row: any = await ConversationModel.findDetailById(id, userId);
   if (!row) throw new Error("Conversation not found");
 
-  const conv = mapConversationRow(row);
+  const conv: any = mapConversationRow(row);
+  if (!conv.is_member) {
+    const lastVisible = await ConversationModel.findLastVisibleMessage(id, userId);
+    conv.last_message = lastVisible
+      ? { content: lastVisible.content, type: lastVisible.type, sender_id: lastVisible.sender_id, created_at: lastVisible.created_at }
+      : null;
+  }
 
   let is_blocked_by_other = false;
   let is_online = false;
-  let last_seen_at = null; // MỚI
+  let last_seen_at = null;
 
-  if (conv.type === "private" && conv.other_user_id) {
+  if (conv.type === "private" && conv.other_user_id && !conv.other_user_deactivated) {
     is_blocked_by_other = await BlockModel.isBlockedByUser(userId, conv.other_user_id);
     is_online = isUserOnline(conv.other_user_id);
-
-    // chỉ query DB khi offline — đang online thì UI ưu tiên hiện "Đang hoạt
-    // động", không cần last_seen_at, tránh 1 lượt query thừa cho case phổ
-    // biến hơn
     if (!is_online) {
       const otherUser = await UserModel.findById(conv.other_user_id);
       last_seen_at = otherUser?.last_seen_at ?? null;
@@ -328,6 +344,9 @@ export const removeMember = async (
   const isAdmin = await ConversationModel.isAdmin(conversationId, userId);
   if (!isAdmin && userId !== targetId) throw new Error("Not authorized");
 
+  const targetIsMember = await ConversationModel.isMember(conversationId, targetId);
+  if (!targetIsMember) throw new Error("User is not a member of this conversation");
+
   const isSelfLeave = userId === targetId;
 
   if (isSelfLeave && isAdmin) {
@@ -434,7 +453,15 @@ export const markRead = async (conversationId: number, userId: number) => {
 
 export const listMembers = async (conversationId: number) => {
   const rows = await ConversationModel.listMembers(conversationId);
-  return rows.map((r: any) => ({ ...r, is_online: isUserOnline(r.id) }));
+  return rows.map((r: any) => {
+    if (r.is_deleted) {
+      return {
+        id: r.id, role: r.role, joined_at: r.joined_at, is_muted: r.is_muted, last_read_at: r.last_read_at,
+        name: DEACTIVATED_NAME, avatar_url: null, is_online: false, is_deactivated: true,
+      };
+    }
+    return { ...r, is_online: isUserOnline(r.id) };
+  });
 };
 
 export const getMutualGroups = async (userId: number, otherUserId: number) => {
@@ -460,4 +487,57 @@ export const getMutualGroups = async (userId: number, otherUserId: number) => {
 export const findPrivateConversationId = async (userId: number, otherUserId: number) => {
   const conv: any = await ConversationModel.findPrivateBetween(userId, otherUserId);
   return conv ? conv.id : null;
+};
+
+export const reassignAdminForDeactivatedUser = async (userId: number) => {
+  const groupIds = await ConversationModel.listAdminGroupIds(userId);
+  for (const conversationId of groupIds) {
+    const members = await ConversationModel.listMembers(conversationId);
+    const otherActiveMembers = members.filter((m: any) => m.id !== userId && !m.is_deleted);
+    const otherAdmins = otherActiveMembers.filter((m: any) => m.role === "admin");
+
+    if (otherAdmins.length === 0 && otherActiveMembers.length > 0) {
+      const candidates = [...otherActiveMembers].sort(
+        (a: any, b: any) => new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime()
+      );
+      const newAdminId = candidates[0].id;
+      await ConversationModel.updateMemberRole(conversationId, newAdminId, "admin");
+
+      try {
+        getIO().to(`conversation:${conversationId}`).emit("conversation:role-changed", {
+          conversationId, userId: newAdminId, actorId: userId, role: "admin",
+        });
+      } catch {
+        // io chưa init — không fail luồng vô hiệu hoá tài khoản
+      }
+    }
+
+    // MỚI — demote chính người vừa bị vô hiệu hoá, tránh trạng thái "2
+    // admin cùng lúc" gây nhầm lẫn dù 1 trong 2 đã không còn hoạt động được
+    await ConversationModel.updateMemberRole(conversationId, userId, "member");
+    try {
+      getIO().to(`conversation:${conversationId}`).emit("conversation:role-changed", {
+        conversationId, userId, actorId: userId, role: "member",
+      });
+    } catch {
+      // io chưa init
+    }
+  }
+};
+
+export const searchConversations = async (userId: number, keyword: string) => {
+  const rows = await ConversationModel.searchConversationsByMessage(userId, keyword);
+  return rows.map((row: any) => {
+    const isPrivate = row.type === 'private';
+    const otherDeactivated = isPrivate && !!row.other_user_is_deleted;
+    return {
+      id: row.id,
+      type: row.type,
+      name: isPrivate ? (otherDeactivated ? DEACTIVATED_NAME : row.other_user_name) : row.group_name,
+      avatar_url: isPrivate ? (otherDeactivated ? null : row.other_user_avatar_url) : row.group_avatar_url,
+      match_count: Number(row.match_count) || 0,
+      last_match_content: row.last_match_content,
+      last_match_at: row.last_match_at,
+    };
+  });
 };

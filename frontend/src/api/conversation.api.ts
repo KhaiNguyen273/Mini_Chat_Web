@@ -8,6 +8,20 @@ import type {
 } from '../types/conversation.types'
 import type { MutualGroup } from '../types/mutual.types'
 
+export interface ConversationSearchResult {
+  id: string
+  type: 'private' | 'group'
+  name: string
+  avatar_url?: string | null
+  match_count: number
+  last_match_content: string | null
+  last_match_at: string
+}
+
+export const searchConversationsApi = (q: string) =>
+  axiosClient.get<{ data: any[] }>('/conversations/search', { params: { q } })
+    .then((res) => res.data.data.map((r) => ({ ...r, id: String(r.id) })) as ConversationSearchResult[])
+
 export const createPrivateConversationApi = (otherUserId: string) =>
   axiosClient
     .post<{ data: any }>('/conversations/private', { otherUserId })
@@ -57,8 +71,8 @@ export const muteConversationApi = (id: string, muted: boolean) =>
 
 export const getConversationMembersApi = (id: string) =>
   axiosClient
-    .get<{ data: ConversationMember[] }>(`/conversations/${id}/members`)
-    .then((res) => res.data.data)
+    .get<{ data: any[] }>(`/conversations/${id}/members`)
+    .then((res) => res.data.data.map((m) => ({ ...m, id: String(m.id) })) as ConversationMember[])
 
 export const addConversationMemberApi = (id: string, userId: string) =>
   axiosClient.post(`/conversations/${id}/members`, { userId })

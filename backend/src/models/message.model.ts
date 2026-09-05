@@ -1,10 +1,7 @@
 import { pool } from "../config/db";
 import { RowDataPacket, ResultSetHeader } from "mysql2";
 
-function toMySQLDateTime(isoString: string): string {
-  // "2026-08-15T06:48:14.000Z" → "2026-08-15 06:48:14"
-  return new Date(isoString).toISOString().slice(0, 19).replace('T', ' ');
-}
+// XOÁ hẳn hàm toMySQLDateTime — không cần format tay nữa
 
 export const create = async (
   conversationId: number,
@@ -19,13 +16,11 @@ export const create = async (
   return result.insertId;
 };
 
-// giữ nguyên findById cũ — dùng nội bộ (deleteMessage, editMessage, sendMessage...)
 export const findById = async (id: number) => {
   const [rows] = await pool.query<RowDataPacket[]>("SELECT * FROM messages WHERE id = ?", [id]);
   return rows[0] || null;
 };
 
-// mới — dùng riêng cho GET /messages/:id, trả đủ field + attachments giống format list
 export const findByIdWithAttachments = async (id: number) => {
   const [rows] = await pool.query<RowDataPacket[]>(
     "SELECT * FROM messages WHERE id = ? AND is_deleted = false",
@@ -44,17 +39,13 @@ export const findByIdWithAttachments = async (id: number) => {
   return { ...message, attachments };
 };
 
-// mỗi tin nhắn chỉ hợp lệ nếu created_at nằm trong 1 giai đoạn user thực sự
-// là thành viên tại thời điểm đó — JOIN với conversation_membership_periods
 export const listByConversation = async (
   conversationId: number,
-  userId: number, // MỚI — bắt buộc để lọc đúng theo người xem
+  userId: number,
   cursor: string | null,
   limit: number,
   q?: string | null
 ) => {
-  // ĐÃ SỬA thứ tự bind — p.user_id = ? xuất hiện TRƯỚC m.conversation_id = ?
-  // trong câu SQL bên dưới, nên userId phải đứng trước conversationId
   const params: any[] = [userId, conversationId];
   let sql = `
     SELECT DISTINCT m.* FROM messages m
@@ -68,7 +59,12 @@ export const listByConversation = async (
 
   if (cursor) {
     sql += " AND m.created_at < ?";
-    params.push(toMySQLDateTime(cursor));
+    // MỚI — truyền Date object thay vì tự cắt chuỗi ISO. Pool cấu hình
+    // timezone: '+07:00' chỉ quy đổi đúng múi giờ khi param là Date; trước
+    // đây gửi string UTC thô nên lệch 7 tiếng so với dữ liệu lưu local
+    // trong DB, khiến cả 1 khoảng tin nhắn cũ bị bỏ sót, nextCursor sớm về
+    // null và hasMore rớt false chỉ sau 1-2 lần load
+    params.push(new Date(cursor));
   }
   if (q) {
     sql += " AND m.content LIKE ?";
@@ -147,11 +143,9 @@ export const getReaders = async (messageId: number) => {
   return rows;
 };
 
-// message.model.ts — thêm hàm mới, song song với listByConversation
-// tương tự cho listAfter — dùng cho polling/jump-to-message
 export const listAfter = async (
   conversationId: number,
-  userId: number, // MỚI
+  userId: number,
   afterCursor: string,
   limit: number
 ) => {
@@ -164,7 +158,7 @@ export const listAfter = async (
        AND (p.left_at IS NULL OR m.created_at <= p.left_at)
      WHERE m.conversation_id = ? AND m.is_deleted = false AND m.created_at > ?
      ORDER BY m.created_at ASC, m.id ASC LIMIT ?`,
-    [userId, conversationId, afterCursor, limit]
+    [userId, conversationId, new Date(afterCursor), limit] // MỚI — Date object, cùng lý do trên
   );
 
   if (messages.length === 0) return [];

@@ -53,7 +53,7 @@ function Login() {
             type="tel"
             placeholder="0912345678"
             value={phone}
-            onChange={e => { setPhone(e.target.value); setError('') }}
+            onChange={e =>  setPhone(e.target.value)}
             className="flex-1 outline-none text-sm bg-transparent text-[#1a1c1e] placeholder:text-[#70787d]"
           />
         </div>
@@ -70,7 +70,7 @@ function Login() {
             type={showPassword ? 'text' : 'password'}
             placeholder="••••••••"
             value={password}
-            onChange={e => { setPassword(e.target.value); setError('') }}
+            onChange={e => setPassword(e.target.value)}
             className="flex-1 outline-none text-sm bg-transparent text-[#1a1c1e] placeholder:text-[#70787d]"
           />
           <button type="button" onClick={() => setShowPassword(v => !v)} className="ml-2 shrink-0">

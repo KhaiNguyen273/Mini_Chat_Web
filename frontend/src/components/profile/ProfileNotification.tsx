@@ -56,6 +56,9 @@ function ProfileNotification() {
           navigate(`/chat/${n.conversation_id}?highlight=${n.reference_id}`)
           return
         }
+        // không có conversation_id sẵn (dữ liệu cũ) — nếu message cũng không
+        // còn tồn tại thì không biết điều hướng đi đâu, phải tự báo lỗi ở đây;
+        // mọi trường hợp khác đều để ChatPage là nơi DUY NHẤT xử lý toast
         try {
           const msg = await getMessageByIdApi(n.reference_id)
           navigate(`/chat/${msg.conversation_id}?highlight=${n.reference_id}`)
@@ -68,7 +71,14 @@ function ProfileNotification() {
         navigate('/pending')
         break
       case 'friendship':
-        navigate('/contacts')
+        // MỚI — mở đúng người liên quan (actor) thay vì chỉ về danh sách
+        // chung chung; ContactsPage đã có sẵn xử lý ?userId= để tự search +
+        // select đúng contact
+        if (n.actor?.id) {
+          navigate(`/contacts?userId=${n.actor.id}`)
+        } else {
+          navigate('/contacts')
+        }
         break
     }
   }
@@ -76,7 +86,7 @@ function ProfileNotification() {
   const handleAcceptRequest = async (friendshipId: string) => {
     await acceptRequest(friendshipId)
     const noti = notifications.find(
-      (n) => n.reference_type === 'friendship' && n.reference_id == friendshipId && !n.is_read
+      (n) => n.reference_type === 'friendship' && String(n.reference_id) === String(friendshipId) && !n.is_read
     )
     if (noti) markAsRead(noti.id)
   }
@@ -84,7 +94,7 @@ function ProfileNotification() {
   const handleRejectRequest = async (friendshipId: string) => {
     await rejectRequest(friendshipId)
     const noti = notifications.find(
-      (n) => n.reference_type === 'friendship' && n.reference_id === friendshipId && !n.is_read
+      (n) => n.reference_type === 'friendship' && String(n.reference_id) === String(friendshipId) && !n.is_read
     )
     if (noti) markAsRead(noti.id)
   }

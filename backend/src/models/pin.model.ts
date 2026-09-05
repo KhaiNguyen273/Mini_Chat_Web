@@ -32,7 +32,6 @@ export const countByConversation = async (conversationId: number) => {
   return rows[0].total as number;
 };
 
-// JOIN sẵn để lấy đủ nội dung tin nhắn + người gửi + người ghim, không cần gọi thêm API
 export const listByConversation = async (conversationId: number) => {
   const [rows] = await pool.query<RowDataPacket[]>(
     `SELECT 
@@ -48,5 +47,18 @@ export const listByConversation = async (conversationId: number) => {
      ORDER BY p.pinned_at DESC`,
     [conversationId]
   );
-  return rows;
+
+  if (rows.length === 0) return rows;
+
+  const messageIds = rows.map((r) => r.message_id);
+  const [attachments] = await pool.query<RowDataPacket[]>(
+    `SELECT id, message_id, file_url, file_name, file_size, file_type, category
+     FROM message_attachments WHERE message_id IN (?)`,
+    [messageIds]
+  );
+
+  return rows.map((r) => ({
+    ...r,
+    attachments: attachments.filter((a) => a.message_id === r.message_id),
+  }));
 };

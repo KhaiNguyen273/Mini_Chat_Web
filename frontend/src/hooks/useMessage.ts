@@ -14,15 +14,18 @@ export function useMessage(conversationId: string | undefined) {
   const [hasMore, setHasMore] = useState(true)
   const [error, setError] = useState('')
   const cursorRef = useRef<string | null>(null)
+  const loadingMoreRef = useRef(false)
   // dùng useContext trực tiếp (không phải useConversationContext) để không throw
   // nếu lỡ useMessage được gọi ngoài MainLayout
   const conversationCtx = useContext(ConversationContext)
 
+  
   const fetchInitial = useCallback(async () => {
     if (!conversationId) return
     setLoading(true)
     setError('')
     cursorRef.current = null
+    loadingMoreRef.current = false // reset khi đổi conversation
     try {
       const { messages: data, nextCursor } = await getMessagesApi(conversationId)
       setMessages([...data].reverse())
@@ -36,7 +39,11 @@ export function useMessage(conversationId: string | undefined) {
   }, [conversationId])
 
   const loadMore = async () => {
-    if (!conversationId || !hasMore || loadingMore || !cursorRef.current) return
+    // khoá bằng REF — cập nhật đồng bộ ngay lập tức, không chờ React
+    // re-render như state loadingMore, nên chặn được lệnh gọi thứ 2 bắn ra
+    // trong cùng 1 nhịp sự kiện scroll dồn dập (trackpad/inertia)
+    if (!conversationId || !hasMore || loadingMoreRef.current || !cursorRef.current) return
+    loadingMoreRef.current = true
     setLoadingMore(true)
     try {
       const { messages: data, nextCursor } = await getMessagesApi(conversationId, cursorRef.current)
@@ -48,6 +55,7 @@ export function useMessage(conversationId: string | undefined) {
       setError('Không tải thêm được tin nhắn cũ hơn')
     } finally {
       setLoadingMore(false)
+      loadingMoreRef.current = false
     }
   }
 

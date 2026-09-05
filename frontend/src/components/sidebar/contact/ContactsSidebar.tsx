@@ -7,11 +7,12 @@ interface ContactsSidebarProps {
   onSelect: (contact: SearchedContact) => void
   onSearch: (value: string) => void
   loading?: boolean
+  className?: string
 }
 
-function ContactsSidebar({ list, selectedId, onSelect, onSearch, loading }: ContactsSidebarProps) {
+function ContactsSidebar({ list, selectedId, onSelect, onSearch, loading, className = 'flex' }: ContactsSidebarProps) {
   return (
-    <div className="flex flex-col bg-white min-w-[330px] border-r border-[#e6ebef]">
+    <div className={`${className} md:flex flex-col bg-white w-full md:w-[330px] border-r border-[#e6ebef]`}>
       <div className="px-4 py-3 border-b border-[#e6ebef] min-h-[60px] flex items-center">
         <h2 className="text-base font-bold text-[#1a1c1e]">Danh bạ</h2>
       </div>

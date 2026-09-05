@@ -3,7 +3,11 @@ import { useAuth } from '../../hooks/useAuth'
 import { DEFAULT_AVATAR_URL } from '../../constants'
 import { useNotification } from '../../hooks/useNotification'
 
-function ProfileSidebar() {
+interface ProfileSidebarProps {
+  className?: string
+}
+
+function ProfileSidebar({ className = 'flex' }: ProfileSidebarProps) {
   const navigate = useNavigate()
   const { pathname } = useLocation()
   const { logout, user } = useAuth()
@@ -25,10 +29,15 @@ function ProfileSidebar() {
       label: 'Thông báo',
       icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 0 1-3.46 0"/></svg>
     },
+    {
+      path: '/profile/blocked',
+      label: 'Người dùng đã chặn',
+      icon: <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><line x1="4.9" y1="4.9" x2="19.1" y2="19.1"/></svg>
+    },
   ]
 
-  return (
-    <div className="flex flex-col bg-white min-w-[330px] border-r border-[#e6ebef] h-full">
+   return (
+    <div className={`${className} md:flex flex-col bg-white w-full md:w-[330px] border-r border-[#e6ebef] h-full`}>
 
       <div className="px-4 py-3 border-b border-[#e6ebef] min-h-[60px] flex items-center">
         <h2 className="text-base font-bold text-[#1a1c1e]">Tài khoản</h2>

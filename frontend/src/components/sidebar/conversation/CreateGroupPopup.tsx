@@ -25,7 +25,9 @@ function CreateGroupPopup({ onClose }: CreateGroupPopupProps) {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null)
   const avatarInputRef = useRef<HTMLInputElement>(null)
 
-  const filtered = friends.filter(u => u.name.toLowerCase().includes(search.toLowerCase()))
+  const filtered = friends
+  .filter((u) => !u.is_deactivated)
+  .filter((u) => u.name.toLowerCase().includes(search.toLowerCase()))
 
   const toggleSelect = (id: string) => {
     setSelected(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id])
@@ -68,7 +70,7 @@ function CreateGroupPopup({ onClose }: CreateGroupPopupProps) {
       <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose}/>
 
       <div className="fixed inset-0 z-50 flex items-center justify-center">
-        <div className="bg-white rounded-2xl shadow-xl w-[480px] max-h-[600px] flex flex-col">
+        <div className="bg-white rounded-2xl shadow-xl w-[calc(100vw-2rem)] max-w-[480px] max-h-[85vh] flex flex-col">
 
           <div className="flex items-center justify-between px-6 py-4 border-b border-[#e6ebef]">
             <div className="w-7"/>

@@ -40,6 +40,10 @@ export const login = async (phone: string, password: string) => {
   };
 };
 
+export const revokeAllRefreshTokens = async (userId: number) => {
+  await pool.query("DELETE FROM refresh_tokens WHERE user_id = ?", [userId]);
+};
+
 export const refresh = async (token: string) => {
   const [rows]: any = await pool.query(
     "SELECT * FROM refresh_tokens WHERE token = ? AND expires_at > NOW()",
@@ -48,6 +52,10 @@ export const refresh = async (token: string) => {
   if (!rows[0]) throw new Error("Invalid or expired refresh token");
 
   const payload = jwt.verify(token, REFRESH_SECRET) as { userId: number };
+
+  const user = await UserModel.findById(payload.userId);
+  if (!user) throw new Error("Account is deactivated");
+
   const accessToken = jwt.sign({ userId: payload.userId }, ACCESS_SECRET, { expiresIn: "15m" });
   return { accessToken };
 };

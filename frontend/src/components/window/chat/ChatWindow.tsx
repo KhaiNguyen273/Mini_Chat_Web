@@ -16,9 +16,10 @@ interface ChatWindowProps {
   blockedByOther: boolean
   onUnblock: () => void
   onActiveTyping?: () => void
+  onBack?: () => void
 }
 
-function ChatWindow({ conversationId, detail, messageState, highlightMessageId, onToggleInfo, iBlockedThem, blockedByOther, onUnblock, onActiveTyping }: ChatWindowProps) {
+function ChatWindow({ conversationId, detail, messageState, highlightMessageId, onToggleInfo, onBack, iBlockedThem, blockedByOther, onUnblock, onActiveTyping }: ChatWindowProps) {
   const { user } = useAuth()
   const { typingUserId, notifyTyping, notifyStopTyping } = useTyping(conversationId)
 
@@ -34,11 +35,12 @@ function ChatWindow({ conversationId, detail, messageState, highlightMessageId, 
   }
 
   return (
-    <div className="flex flex-col flex-1 h-full bg-[#f7f9fb]">
+     <div className="flex flex-col flex-1 h-full bg-[#f7f9fb]">
       <ChatHeader
         displayName={detail.displayName}
         displayAvatar={detail.displayAvatar}
         onToggleInfo={onToggleInfo}
+        onBack={onBack}
         conversationType={detail.conversation?.type}
         otherUserId={detail.conversation?.other_user_id}
         groupAvatarUrl={detail.conversation?.avatar_url}
@@ -79,6 +81,7 @@ function ChatWindow({ conversationId, detail, messageState, highlightMessageId, 
           sendMessage={messageState.sendMessage}
           iBlockedThem={iBlockedThem}
           blockedByOther={blockedByOther}
+          otherUserDeactivated={detail.conversation?.other_user_deactivated}
           onUnblock={onUnblock}
           onTyping={handleTyping}
           onStopTyping={notifyStopTyping}

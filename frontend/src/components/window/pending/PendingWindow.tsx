@@ -7,9 +7,10 @@ interface PendingWindowProps {
   conversation: Conversation | null
   onAccept: (id: string) => void
   onReject: (id: string) => void
+  onBack?: () => void
 }
 
-function PendingWindow({ conversation, onAccept, onReject }: PendingWindowProps) {
+function PendingWindow({ conversation, onAccept, onReject, onBack }: PendingWindowProps) {
   const { messages, loading } = useMessage(conversation?.id)
 
   if (!conversation) {
@@ -25,12 +26,16 @@ function PendingWindow({ conversation, onAccept, onReject }: PendingWindowProps)
   return (
     <div className="flex flex-col flex-1 h-full bg-[#f7f9fb]">
 
-      <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-[#e6ebef] min-h-[60px]">
-        <div className="flex items-center gap-3">
-          <img src={avatar} alt={conversation.name} className="w-10 h-10 rounded-full object-cover"/>
-          <p className="text-sm font-semibold text-[#1a1c1e]">{conversation.name}</p>
-        </div>
+      <div className="flex items-center gap-2 px-4 py-3 bg-white border-b border-[#e6ebef] min-h-[60px]">
+        {onBack && (
+          <button onClick={onBack} className="w-8 h-8 rounded-full hover:bg-[#f2f4f6] flex items-center justify-center shrink-0 md:hidden">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1c1e" strokeWidth="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+          </button>
+        )}
+        <img src={avatar} alt={conversation.name} className="w-10 h-10 rounded-full object-cover"/>
+        <p className="text-sm font-semibold text-[#1a1c1e]">{conversation.name}</p>
       </div>
+
 
       <div className="flex-1 overflow-y-auto px-6 py-6 flex flex-col gap-4">
         <div className="flex justify-center">
@@ -44,7 +49,13 @@ function PendingWindow({ conversation, onAccept, onReject }: PendingWindowProps)
           <p className="text-xs text-center text-[#565f71]">Đang tải...</p>
         ) : (
           messages.map((msg) => (
-            <MessageItem key={msg.id} content={msg.content} isMine={false} attachments={msg.attachments} />
+            <MessageItem
+              key={msg.id}
+              id={msg.id}
+              content={msg.content}
+              isMine={false}
+              attachments={msg.attachments}
+            />
           ))
         )}
 

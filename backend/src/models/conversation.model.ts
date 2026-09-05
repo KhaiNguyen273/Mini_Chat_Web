@@ -9,6 +9,7 @@ const CONVERSATION_DETAIL_SELECT = `
     ou.id AS other_user_id,
     ou.name AS other_user_name,
     ou.avatar_url AS other_user_avatar_url,
+    ou.is_deleted AS other_user_is_deleted,
     lm.content AS last_message_content,
     lm.sender_id AS last_message_sender_id,
     lm.created_at AS last_message_created_at,
@@ -16,6 +17,8 @@ const CONVERSATION_DETAIL_SELECT = `
     (SELECT COUNT(*) FROM pinned_messages pm WHERE pm.conversation_id = c.id) AS pinned_count,
     (SELECT cm_self.last_read_at FROM conversation_members cm_self 
       WHERE cm_self.conversation_id = c.id AND cm_self.user_id = ?) AS my_last_read_at,
+    (SELECT cm_active.removed_at FROM conversation_members cm_active 
+      WHERE cm_active.conversation_id = c.id AND cm_active.user_id = ?) AS my_removed_at,
     (
       SELECT SUBSTRING_INDEX(
         GROUP_CONCAT(u2.avatar_url ORDER BY cm.joined_at ASC SEPARATOR '||'),
@@ -103,9 +106,11 @@ export const listForUser = async (userId: number) => {
          c.status = 'active'
          OR (c.type = 'private' AND c.status IN ('pending', 'rejected') AND c.created_by = ? AND lm.created_at IS NOT NULL)
        )
-       AND (c.type != 'private' OR ou.is_deleted = false OR ou.id IS NULL)
      ORDER BY c.updated_at DESC, c.created_at DESC`,
-    [userId, userId, userId, userId]
+    // ĐÃ XOÁ điều kiện "ou.is_deleted = false" khỏi WHERE — private chat
+    // với người đã vô hiệu hoá KHÔNG được biến mất khỏi sidebar, lịch sử
+    // vẫn phải giữ nguyên (yêu cầu mới về tài khoản vô hiệu hoá)
+    [userId, userId, userId, userId, userId]
   );
   return rows;
 };
@@ -117,17 +122,28 @@ export const listPendingForUser = async (userId: number) => {
      JOIN conversation_members m ON m.conversation_id = c.id AND m.user_id = ?
      WHERE c.status = 'pending' AND c.created_by != ? AND lm.created_at IS NOT NULL
      ORDER BY c.created_at DESC`,
-    [userId, userId, userId, userId]
+    [userId, userId, userId, userId, userId]
   );
   return rows;
 };
 
+
 export const findDetailById = async (conversationId: number, userId: number) => {
   const [rows] = await pool.query<RowDataPacket[]>(
     `${CONVERSATION_DETAIL_SELECT} WHERE c.id = ?`,
-    [userId, userId, conversationId]
+    [userId, userId, userId, conversationId]
   );
   return rows[0] || null;
+};
+
+export const listAdminGroupIds = async (userId: number): Promise<number[]> => {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT cm.conversation_id FROM conversation_members cm
+     JOIN conversations c ON c.id = cm.conversation_id
+     WHERE cm.user_id = ? AND cm.role = 'admin' AND cm.removed_at IS NULL AND c.type = 'group'`,
+    [userId]
+  );
+  return rows.map((r) => r.conversation_id);
 };
 
 
@@ -199,7 +215,7 @@ export const markRead = async (conversationId: number, userId: number) => {
 
 export const listMembers = async (conversationId: number) => {
   const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT u.id, u.name, u.avatar_url, u.last_seen_at, m.role, m.joined_at, m.is_muted, m.last_read_at
+    `SELECT u.id, u.name, u.avatar_url, u.last_seen_at, u.is_deleted, m.role, m.joined_at, m.is_muted, m.last_read_at
      FROM conversation_members m JOIN users u ON u.id = m.user_id
      WHERE m.conversation_id = ? AND m.removed_at IS NULL`,
     [conversationId]
@@ -296,4 +312,44 @@ export const listConversationIdsForUser = async (userId: number): Promise<number
     [userId]
   );
   return rows.map((r) => r.conversation_id);
+};
+
+export const findLastVisibleMessage = async (conversationId: number, userId: number) => {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT m.content, m.type, m.sender_id, m.created_at
+     FROM messages m
+     JOIN conversation_membership_periods p 
+       ON p.conversation_id = m.conversation_id AND p.user_id = ?
+       AND m.created_at >= p.joined_at AND (p.left_at IS NULL OR m.created_at <= p.left_at)
+     WHERE m.conversation_id = ? AND m.is_deleted = false
+     ORDER BY m.created_at DESC LIMIT 1`,
+    [userId, conversationId]
+  );
+  return rows[0] || null;
+};
+
+export const searchConversationsByMessage = async (userId: number, keyword: string) => {
+  const [rows] = await pool.query<RowDataPacket[]>(
+    `SELECT 
+       c.id, c.type, c.name AS group_name, c.avatar_url AS group_avatar_url,
+       ou.id AS other_user_id, ou.name AS other_user_name, ou.avatar_url AS other_user_avatar_url, ou.is_deleted AS other_user_is_deleted,
+       COUNT(m.id) AS match_count,
+       MAX(m.created_at) AS last_match_at,
+       SUBSTRING_INDEX(GROUP_CONCAT(m.content ORDER BY m.created_at DESC SEPARATOR '||'), '||', 1) AS last_match_content
+     FROM messages m
+     JOIN conversation_members cm ON cm.conversation_id = m.conversation_id AND cm.user_id = ? 
+       AND (cm.removed_at IS NULL OR cm.removed_reason = 'kicked')
+     JOIN conversation_membership_periods p 
+       ON p.conversation_id = m.conversation_id AND p.user_id = ?
+       AND m.created_at >= p.joined_at AND (p.left_at IS NULL OR m.created_at <= p.left_at)
+     JOIN conversations c ON c.id = m.conversation_id
+     LEFT JOIN conversation_members om ON om.conversation_id = c.id AND om.user_id != ? AND c.type = 'private'
+     LEFT JOIN users ou ON ou.id = om.user_id
+     WHERE m.is_deleted = false AND m.content LIKE ? AND c.status = 'active'
+     GROUP BY c.id
+     ORDER BY last_match_at DESC
+     LIMIT 30`,
+    [userId, userId, userId, `%${keyword}%`]
+  );
+  return rows;
 };

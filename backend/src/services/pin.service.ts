@@ -129,6 +129,7 @@ export const listPinned = async (conversationId: number, userId: number) => {
       type: row.message_type,
       created_at: row.message_created_at,
       sender: { id: row.sender_id, name: row.sender_name, avatar_url: row.sender_avatar_url },
+      attachments: row.attachments || [],
     },
   }));
 };

@@ -46,27 +46,30 @@ export function useConversation() {
     }
   }, [])
 
-  const openPrivateConversation = async (otherUserId: string) => {
+  const openPrivateConversation = useCallback(async (otherUserId: string) => {
     const conv = await createPrivateConversationApi(otherUserId)
     if (conv.status === 'active') {
       setConversations((prev) => upsertById(prev, conv))
     }
     return conv
-  }
+  }, [])
 
-  const createGroup = async (payload: CreateGroupPayload) => {
+  const createGroup = useCallback(async (payload: CreateGroupPayload) => {
     const conv = await createGroupConversationApi(payload)
     setConversations((prev) => upsertById(prev, conv))
     return conv
-  }
+  }, [])
 
-  const updateConversation = async (id: string, payload: UpdateConversationPayload) => {
+  const updateConversation = useCallback(async (id: string, payload: UpdateConversationPayload) => {
     const updated = await updateConversationApi(id, payload)
     setConversations((prev) => prev.map((c) => (String(c.id) === String(id) ? updated : c)))
     return updated
-  }
+  }, [])
 
-  const markAsRead = async (id: string) => {
+  // MỚI — bọc useCallback: tham chiếu ổn định, tránh effect ở nơi gọi
+  // (ChatPage.tsx) bị teardown/setup lại liên tục mỗi khi BẤT KỲ
+  // conversation nào khác trong toàn app có sự kiện realtime
+  const markAsRead = useCallback(async (id: string) => {
     const optimisticNow = new Date().toISOString()
     setConversations((prev) =>
       prev.map((c) => (String(c.id) === String(id) ? { ...c, last_read_at: optimisticNow } : c))
@@ -79,36 +82,36 @@ export function useConversation() {
         )
       }
     } catch {
-      // lỗi mạng — giữ nguyên optimistic, lần đọc tiếp theo hoặc F5 sẽ tự đồng bộ
+      // lỗi mạng — giữ nguyên optimistic
     }
-  }
+  }, [])
 
-  const toggleMute = async (id: string, muted: boolean) => {
+  const toggleMute = useCallback(async (id: string, muted: boolean) => {
     await muteConversationApi(id, muted)
     setConversations((prev) => prev.map((c) => (String(c.id) === String(id) ? { ...c, muted } : c)))
-  }
+  }, [])
 
-  const getMembers = async (id: string): Promise<ConversationMember[]> => {
+  const getMembers = useCallback(async (id: string): Promise<ConversationMember[]> => {
     return getConversationMembersApi(id)
-  }
+  }, [])
 
-  const addMember = async (id: string, userId: string) => {
+  const addMember = useCallback(async (id: string, userId: string) => {
     await addConversationMemberApi(id, userId)
-  }
+  }, [])
 
-  const removeMember = async (id: string, userId: string, newAdminId?: string) => {
+  const removeMember = useCallback(async (id: string, userId: string, newAdminId?: string) => {
     await removeConversationMemberApi(id, userId, newAdminId)
-  }
+  }, [])
 
-  const changeMemberRole = async (id: string, userId: string, role: 'admin' | 'member') => {
+  const changeMemberRole = useCallback(async (id: string, userId: string, role: 'admin' | 'member') => {
     await updateMemberRoleApi(id, userId, role)
-  }
+  }, [])
 
-  const removeConversationLocally = (id: string) => {
+  const removeConversationLocally = useCallback((id: string) => {
     setConversations((prev) => prev.filter((c) => String(c.id) !== String(id)))
-  }
+  }, [])
 
-  const touchConversation = (
+  const touchConversation = useCallback((
     id: string,
     message: { content: string | null; type: string; sender_id: string; created_at: string }
   ): boolean => {
@@ -122,7 +125,7 @@ export function useConversation() {
       return [updated, ...rest]
     })
     return true
-  }
+  }, [])
 
   useEffect(() => {
     fetchConversations()

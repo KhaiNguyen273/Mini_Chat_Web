@@ -39,11 +39,12 @@ export const listByConversation = async (
 
 export const countByCategory = async (conversationId: number) => {
   const [rows] = await pool.query<RowDataPacket[]>(
-    `SELECT category, COUNT(*) AS total 
-     FROM message_attachments 
-     WHERE conversation_id = ? 
-     GROUP BY category`,
+    `SELECT ma.category, COUNT(*) AS total 
+     FROM message_attachments ma
+     JOIN messages m ON m.id = ma.message_id AND m.is_deleted = false
+     WHERE ma.conversation_id = ? 
+     GROUP BY ma.category`,
     [conversationId]
   );
-  return rows; // [{category: 'image', total: 12}, {category: 'file', total: 3}, ...]
+  return rows;
 };

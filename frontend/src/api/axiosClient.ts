@@ -5,6 +5,8 @@ import { reconnectSocketWithNewToken } from '../socket/socketClient'
 
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api'
 
+const AUTH_ENDPOINTS = ['/auth/login', '/auth/register', '/auth/refresh']
+
 const axiosClient = axios.create({
   baseURL: BASE_URL,
   withCredentials: true, // BẮT BUỘC — để browser gửi kèm cookie refreshToken
@@ -23,7 +25,11 @@ axiosClient.interceptors.response.use(
   (res) => res,
   async (error) => {
     const originalRequest = error.config
-    if (error.response?.status !== 401 || originalRequest._retry) {
+    const isAuthEndpoint = AUTH_ENDPOINTS.some((path) => originalRequest?.url?.includes(path))
+
+    // 401 ở các endpoint auth (sai SĐT/mật khẩu, refresh hết hạn...) không phải
+    // do accessToken hết hạn — không thử refresh, trả lỗi nguyên vẹn cho nơi gọi
+    if (error.response?.status !== 401 || originalRequest._retry || isAuthEndpoint) {
       return Promise.reject(error)
     }
     originalRequest._retry = true

@@ -11,7 +11,7 @@ function ConfirmDialog() {
     <>
       <div className="fixed inset-0 bg-black/30 z-[200]" onClick={hideCancel ? undefined : ctx.handleCancel} />
       <div className="fixed inset-0 z-[201] flex items-center justify-center pointer-events-none">
-        <div className="bg-white rounded-2xl shadow-xl w-[360px] p-6 pointer-events-auto">
+        <div className="bg-white rounded-2xl shadow-xl w-[calc(100vw-2rem)] max-w-[360px] p-6 pointer-events-auto">
           <h3 className="text-base font-bold text-[#1a1c1e] mb-2">{title}</h3>
           <p className="text-sm text-[#565f71] mb-6">{message}</p>
           <div className="flex gap-3 justify-end">

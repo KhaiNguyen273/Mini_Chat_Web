@@ -7,11 +7,12 @@ interface PendingSidebarProps {
   loading: boolean
   selectedId: string | null
   onSelect: (id: string) => void
+  className?: string
 }
 
-function PendingSidebar({ list, loading, selectedId, onSelect }: PendingSidebarProps) {
+function PendingSidebar({ list, loading, selectedId, onSelect, className = 'flex' }: PendingSidebarProps) {
   return (
-    <div className="flex flex-col bg-white min-w-[330px] border-r border-[#e6ebef]">
+    <div className={`${className} md:flex flex-col bg-white w-full md:w-[330px] border-r border-[#e6ebef]`}>
       <div className="px-4 py-3 border-b border-[#e6ebef] min-h-[60px] flex items-center">
         <h2 className="text-base font-bold text-[#1a1c1e]">Tin nhắn chờ</h2>
       </div>

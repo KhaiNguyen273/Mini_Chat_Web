@@ -36,6 +36,7 @@ export interface Conversation {
   is_online?: boolean
   last_seen_at?: string | null // mới
   member_avatars?: string[]
+  other_user_deactivated?: boolean
 }
 
 export interface CreateGroupPayload {

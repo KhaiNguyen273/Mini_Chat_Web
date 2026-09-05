@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import type { MessageType } from '../../../types/message.types'
 import { useConfirm } from '../../../hooks/useConfirm'
 
@@ -6,24 +6,42 @@ import { useConfirm } from '../../../hooks/useConfirm'
 interface AttachedFile {
   name: string
   file: File
+  previewUrl?: string // chỉ tạo cho ảnh
 }
 
 interface ChatInputProps {
   sendMessage: (content: string, type?: MessageType, files?: File[]) => Promise<any>
   iBlockedThem?: boolean
   blockedByOther?: boolean
+  otherUserDeactivated?: boolean // MỚI
   onUnblock?: () => void
   onTyping?: () => void
   onStopTyping?: () => void
 }
 
-function ChatInput({ sendMessage, iBlockedThem, blockedByOther, onUnblock, onTyping, onStopTyping }: ChatInputProps) {
+function ChatInput({ sendMessage, iBlockedThem, blockedByOther, otherUserDeactivated, onUnblock, onTyping, onStopTyping }: ChatInputProps) {
   const [message, setMessage] = useState('')
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([])
   const [sending, setSending] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const confirm = useConfirm()
+
+  // dọn URL object khi unmount, tránh leak
+  useEffect(() => {
+    return () => {
+      attachedFiles.forEach((f) => { if (f.previewUrl) URL.revokeObjectURL(f.previewUrl) })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  if (otherUserDeactivated) {
+    return (
+      <div className="flex items-center justify-center px-4 py-4 bg-white border-t border-[#e6ebef]">
+        <p className="text-sm text-[#565f71] font-medium">Người dùng này hiện không khả dụng</p>
+      </div>
+    )
+  }
 
   // họ chặn mình — không có quyền làm gì cả, chỉ báo lý do
   if (blockedByOther) {
@@ -48,6 +66,14 @@ function ChatInput({ sendMessage, iBlockedThem, blockedByOther, onUnblock, onTyp
     )
   }
 
+  const getSendErrorMessage = (rawMsg: string): string => {
+    if (!rawMsg) return 'Gửi tin nhắn thất bại, vui lòng thử lại'
+    if (rawMsg.includes('is deactivated')) return 'Người dùng này hiện không khả dụng'
+    if (rawMsg.includes('is blocked')) return 'Không thể gửi tin nhắn — người dùng đã bị chặn'
+    if (rawMsg.includes('Not a member')) return 'Bạn không còn là thành viên của đoạn chat này'
+    return 'Gửi tin nhắn thất bại, vui lòng thử lại'
+  }
+
   const handleSend = async () => {
     if (sending) return
     if (!message.trim() && attachedFiles.length === 0) return
@@ -59,14 +85,15 @@ function ChatInput({ sendMessage, iBlockedThem, blockedByOther, onUnblock, onTyp
     setSending(true)
     try {
       await sendMessage(message, type, attachedFiles.map(f => f.file))
+      attachedFiles.forEach((f) => { if (f.previewUrl) URL.revokeObjectURL(f.previewUrl) })
       setMessage('')
       setAttachedFiles([])
       onStopTyping?.()
     } catch (err: any) {
-      const msg = err.response?.data?.message || err.message
+      const rawMsg = err.response?.data?.message || err.message
       await confirm({
         title: 'Không thể gửi tin nhắn',
-        message: msg || 'Gửi tin nhắn thất bại, vui lòng thử lại',
+        message: getSendErrorMessage(rawMsg),
         confirmText: 'OK',
         hideCancel: true,
       })
@@ -86,13 +113,21 @@ function ChatInput({ sendMessage, iBlockedThem, blockedByOther, onUnblock, onTyp
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || [])
-    const newFiles = files.map(f => ({ name: f.name, file: f }))
-    setAttachedFiles(prev => [...prev, ...newFiles])
+    const newFiles = files.map((f) => ({
+      name: f.name,
+      file: f,
+      previewUrl: f.type.startsWith('image/') ? URL.createObjectURL(f) : undefined,
+    }))
+    setAttachedFiles((prev) => [...prev, ...newFiles])
     e.target.value = ''
   }
 
   const removeFile = (index: number) => {
-    setAttachedFiles(prev => prev.filter((_, i) => i !== index))
+    setAttachedFiles((prev) => {
+      const target = prev[index]
+      if (target?.previewUrl) URL.revokeObjectURL(target.previewUrl)
+      return prev.filter((_, i) => i !== index)
+    })
   }
 
   const getFileIcon = (name: string) => {
@@ -131,9 +166,13 @@ function ChatInput({ sendMessage, iBlockedThem, blockedByOther, onUnblock, onTyp
           <div className="flex flex-wrap gap-2 pt-1">
             {attachedFiles.map((f, i) => (
               <div key={i} className="flex items-center gap-2 bg-white rounded-xl px-3 py-2 shadow-sm max-w-[160px] relative group">
-                <div className="w-7 h-7 rounded-lg bg-[#d7e3ff] flex items-center justify-center shrink-0">
-                  {getFileIcon(f.name)}
-                </div>
+                {f.previewUrl ? (
+                  <img src={f.previewUrl} alt={f.name} className="w-7 h-7 rounded-lg object-cover shrink-0" />
+                ) : (
+                  <div className="w-7 h-7 rounded-lg bg-[#d7e3ff] flex items-center justify-center shrink-0">
+                    {getFileIcon(f.name)}
+                  </div>
+                )}
                 <p className="text-xs font-medium text-[#1a1c1e] truncate">{f.name}</p>
                 <button onClick={() => removeFile(i)} disabled={sending}
                   className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-[#e6ebef] hover:bg-[#ba1a1a] hover:text-white flex items-center justify-center transition-colors disabled:opacity-50">

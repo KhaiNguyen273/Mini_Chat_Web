@@ -70,6 +70,11 @@ const joinAllConversations = async (socket: AuthSocket, userId: number) => {
     ConversationModel.listPendingForUser(userId),
   ]);
   for (const conv of [...active, ...pending]) {
+    // MỚI — listForUser cố tình vẫn trả về conversation đã bị kick để FE
+    // hiện lịch sử, nhưng KHÔNG được join room, nếu không real-time sẽ
+    // "sống lại" sau mỗi lần F5/reconnect — trái với việc socketsLeave lúc
+    // kick cố tình chặn nhận tin mới
+    if ((conv as any).my_removed_at != null) continue;
     socket.join(`conversation:${conv.id}`);
   }
 };

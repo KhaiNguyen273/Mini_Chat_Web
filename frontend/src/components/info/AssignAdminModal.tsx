@@ -12,7 +12,7 @@ function AssignAdminModal({ candidates, onSelect, onClose }: AssignAdminModalPro
     <>
       <div className="fixed inset-0 bg-black/30 z-[90]" onClick={onClose} />
       <div className="fixed inset-0 z-[91] flex items-center justify-center pointer-events-none">
-        <div className="bg-white rounded-2xl shadow-xl w-[380px] max-h-[480px] flex flex-col pointer-events-auto">
+        <div className="bg-white rounded-2xl shadow-xl w-[calc(100vw-2rem)] max-w-[380px] max-h-[85vh] flex flex-col pointer-events-auto">
           <div className="px-6 py-4 border-b border-[#e6ebef]">
             <h2 className="text-base font-bold text-[#1a1c1e]">Chọn quản trị viên mới</h2>
             <p className="text-xs text-[#565f71] mt-1">Bạn là quản trị viên duy nhất. Hãy chọn người thay thế trước khi rời nhóm.</p>

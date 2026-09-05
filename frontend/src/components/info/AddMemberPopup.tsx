@@ -19,11 +19,13 @@ function AddMemberPopup({ conversationId, currentMembers, onClose, onAdded }: Ad
   const [search, setSearch] = useState('')
   const [adding, setAdding] = useState<string | null>(null)
 
-  const currentIds = new Set(currentMembers.map((m) => m.id))
+  const currentIds = new Set(currentMembers.map((m) => String(m.id)))
   const candidates = friends
-    .filter((f) => !currentIds.has(f.id))
+    .filter((f) => !f.is_deactivated) // MỚI — không thêm được tài khoản đã vô hiệu hoá
+    .filter((f) => !currentIds.has(String(f.id)))
     .filter((f) => f.name.toLowerCase().includes(search.toLowerCase()))
 
+  
   const handleAdd = async (userId: string) => {
     setAdding(userId)
     try {
@@ -41,7 +43,7 @@ function AddMemberPopup({ conversationId, currentMembers, onClose, onAdded }: Ad
     <>
       <div className="fixed inset-0 bg-black/30 z-[80]" onClick={onClose} />
       <div className="fixed inset-0 z-[81] flex items-center justify-center pointer-events-none">
-        <div className="bg-white rounded-2xl shadow-xl w-[400px] max-h-[500px] flex flex-col pointer-events-auto">
+        <div className="bg-white rounded-2xl shadow-xl w-[calc(100vw-2rem)] max-w-[400px] max-h-[85vh] flex flex-col pointer-events-auto">
           <div className="flex items-center justify-between px-6 py-4 border-b border-[#e6ebef]">
             <div className="w-7" />
             <h2 className="text-base font-bold text-[#1a1c1e]">Thêm thành viên</h2>

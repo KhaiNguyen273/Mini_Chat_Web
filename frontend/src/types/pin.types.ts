@@ -1,4 +1,5 @@
-// src/types/pin.types.ts
+import type { Attachment } from './message.types'
+
 export interface PinnedMessage {
   pin_id: string;
   pinned_at: string;
@@ -9,5 +10,6 @@ export interface PinnedMessage {
     type: string;
     created_at: string;
     sender: { id: string; name: string; avatar_url?: string };
+    attachments: Attachment[];
   };
 }

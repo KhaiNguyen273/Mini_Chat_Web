@@ -3,6 +3,7 @@ import { AuthRequest } from "../middlewares/auth.middleware";
 import * as UserService from "../services/user.service";
 import { uploadBufferToCloudinary } from "../services/upload.service";
 import * as UserModel from "../models/user.model";
+import { clearRefreshTokenCookie } from "../config/cookie";
 
 export const getMe = async (req: AuthRequest, res: Response) => {
   try {
@@ -36,6 +37,7 @@ export const changePassword = async (req: AuthRequest, res: Response) => {
 export const deleteMe = async (req: AuthRequest, res: Response) => {
   try {
     await UserService.deleteAccount(req.userId!);
+    clearRefreshTokenCookie(res);
     res.json({ message: "Account deleted" });
   } catch (err: any) {
     res.status(400).json({ message: err.message });

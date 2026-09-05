@@ -8,6 +8,7 @@ import { useConversation } from '../../hooks/useConversation'
 import { useToast } from '../../hooks/useToast'
 import { usePresenceContext } from '../../contexts/PresenceContext'
 import AddMemberPopup from './AddMemberPopup'
+import { getSocket } from '../../socket/socketClient'
 
 interface MenuPos { x: number; y: number }
 
@@ -37,6 +38,19 @@ function MembersPopup({ conversationId, isAdmin, currentUserId, onClose, onMembe
       mem.forEach((m) => seedOnlineStatus(m.id, !!m.is_online, m.last_seen_at))
     })
   }
+
+  useEffect(() => {
+    const socket = getSocket()
+    if (!socket) return
+
+    const handleRoleChanged = ({ conversationId: cid, userId, role }: { conversationId: number; userId: number; role: string }) => {
+      if (String(cid) !== conversationId) return
+      setMembers((prev) => prev.map((m) => (String(m.id) === String(userId) ? { ...m, role: role as 'admin' | 'member' } : m)))
+    }
+
+    socket.on('conversation:role-changed', handleRoleChanged)
+    return () => { socket.off('conversation:role-changed', handleRoleChanged) }
+  }, [conversationId])
 
   useEffect(() => {
     fetchMembers()
@@ -118,7 +132,7 @@ function MembersPopup({ conversationId, isAdmin, currentUserId, onClose, onMembe
       <div className="fixed inset-0 bg-black/30 z-40" onClick={onClose}/>
 
       <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
-        <div className="bg-white rounded-2xl shadow-xl w-[480px] max-h-[600px] flex flex-col pointer-events-auto">
+        <div className="bg-white rounded-2xl shadow-xl w-[calc(100vw-2rem)] max-w-[480px] max-h-[85vh] flex flex-col pointer-events-auto">
 
           <div className="flex items-center justify-between px-6 py-4 border-b border-[#e6ebef]">
             <div className="w-7"/>
@@ -162,11 +176,12 @@ function MembersPopup({ conversationId, isAdmin, currentUserId, onClose, onMembe
           <div className="overflow-y-auto flex-1 py-2">
             {filtered.map((m) => {
               const isSelf = currentUserId && String(m.id) === String(currentUserId)
+              const isDeactivated = (m as any).is_deactivated
               return (
-                <div key={m.id} className="flex items-center gap-3 px-6 py-3 hover:bg-[#f7f9fb] transition-colors">
+                <div key={m.id} className={`flex items-center gap-3 px-6 py-3 hover:bg-[#f7f9fb] transition-colors ${isDeactivated ? 'opacity-50' : ''}`}>
                   <div className="relative shrink-0">
                     <img src={m.avatar_url || DEFAULT_AVATAR_URL} alt={m.name} className="w-11 h-11 rounded-full object-cover"/>
-                    {isOnline(m.id) && (
+                    {isOnline(m.id) && !isDeactivated && (
                       <span className="absolute bottom-0 right-0 w-3 h-3 bg-[#31a24c] rounded-full border-2 border-white"/>
                     )}
                   </div>
@@ -174,7 +189,7 @@ function MembersPopup({ conversationId, isAdmin, currentUserId, onClose, onMembe
                     <p className="text-sm font-semibold text-[#1a1c1e]">{m.name}{isSelf && ' (Bạn)'}</p>
                     <p className="text-xs text-[#565f71] truncate">{m.role === 'admin' ? 'Quản trị viên' : 'Thành viên'}</p>
                   </div>
-                  {!isSelf && (
+                  {!isSelf && (!isDeactivated || isAdmin) && (
                     <button onMouseDown={(e) => handleOpenMenu(e, m.id)} className="w-8 h-8 rounded-full hover:bg-[#f2f4f6] flex items-center justify-center shrink-0 transition-colors">
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#565f71" strokeWidth="2">
                         <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
@@ -185,13 +200,29 @@ function MembersPopup({ conversationId, isAdmin, currentUserId, onClose, onMembe
               )
             })}
           </div>
-
         </div>
       </div>
 
       {openMenuId !== null && (() => {
         const targetMember = members.find((m) => m.id === openMenuId)
         if (!targetMember) return null
+        const isTargetDeactivated = (targetMember as any).is_deactivated
+
+        if (isTargetDeactivated) {
+          if (!isAdmin) return null
+          return (
+            <div className="fixed z-[60] bg-white rounded-xl shadow-lg border border-[#e6ebef] w-52" style={{ top: menuPos.y, left: menuPos.x }} onMouseDown={(e) => e.stopPropagation()}>
+              <button onClick={() => handleKick(targetMember.id, targetMember.name)} className="rounded-lg flex items-center gap-3 px-4 py-2.5 hover:bg-[#f7f9fb] w-full text-left transition-colors">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#ba1a1a" strokeWidth="2">
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M2 21c0-4 3.1-7 7-7s7 3 7 7"/>
+                  <path d="M18 6l5 5M23 6l-5 5"/>
+                </svg>
+                <span className="text-sm text-[#ba1a1a]">Xoá khỏi nhóm</span>
+              </button>
+            </div>
+          )
+        } 
         return (
           <div className="fixed z-[60] bg-white rounded-xl shadow-lg border border-[#e6ebef] w-52" style={{ top: menuPos.y, left: menuPos.x }} onMouseDown={(e) => e.stopPropagation()}>
             <button onClick={() => handleMessage(targetMember.id)} className="rounded-lg flex items-center gap-3 px-4 py-2.5 hover:bg-[#f7f9fb] w-full text-left transition-colors">

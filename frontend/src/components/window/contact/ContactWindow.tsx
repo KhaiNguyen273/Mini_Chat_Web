@@ -20,9 +20,11 @@ import GroupAvatar from "../../ui/GroupAvatar"
 interface ContactWindowProps {
   contact: SearchedContact | null
   onUpdateContact: (id: string, patch: Partial<SearchedContact>) => void
+  onFriendsChanged?: () => void
+  onBack?: () => void
 }
 
-function ContactWindow({ contact, onUpdateContact }: ContactWindowProps) {
+function ContactWindow({ contact, onUpdateContact, onFriendsChanged, onBack }: ContactWindowProps) {
   const confirm = useConfirm()
   const { sendRequest, acceptRequest, rejectRequest, unfriend } = useFriendship()
   const { blockedList, blockUser, unblockUser } = useBlock()
@@ -42,9 +44,6 @@ function ContactWindow({ contact, onUpdateContact }: ContactWindowProps) {
 
   const PREVIEW_LIMIT = 3
 
-
-  console.log("mutualGroups: ",mutualGroups);
-  
 
   useEffect(() => {
     if (!contact) {
@@ -66,6 +65,7 @@ function ContactWindow({ contact, onUpdateContact }: ContactWindowProps) {
       </div>
     )
   }
+
 
   // dùng blockedList (từ /users/blocked) làm nguồn sự thật cho chiều "mình chặn họ" —
   // không dùng contact.relation vì field đó vốn tính cho friendship, chưa chắc phản ánh đúng blocked_users
@@ -102,7 +102,7 @@ function ContactWindow({ contact, onUpdateContact }: ContactWindowProps) {
       await rejectRequest(contact.friendship_id)
       onUpdateContact(contact.id, { relation: 'none', friendship_id: null })
       const noti = notifications.find(
-        (n) => n.reference_type === 'friendship' && n.reference_id === contact.friendship_id && !n.is_read
+        (n) => n.reference_type === 'friendship' && n.reference_id == contact.friendship_id && !n.is_read
       )
       if (noti) markAsRead(noti.id)
       showToast('Đã từ chối lời mời', 'info')
@@ -123,6 +123,7 @@ function ContactWindow({ contact, onUpdateContact }: ContactWindowProps) {
     try {
       await unfriend(contact.friendship_id)
       onUpdateContact(contact.id, { relation: 'none', friendship_id: null })
+      onFriendsChanged?.()
       showToast('Đã huỷ kết bạn', 'info')
     } catch {
       showToast('Không thể huỷ kết bạn, vui lòng thử lại', 'error')
@@ -182,6 +183,14 @@ function ContactWindow({ contact, onUpdateContact }: ContactWindowProps) {
 
   return (
     <div className="flex flex-col flex-1 h-full bg-[#f7f9fb] overflow-y-auto">
+      {onBack && (
+        <div className="flex items-center gap-2 px-4 py-3 bg-white border-b border-[#e6ebef] md:hidden">
+          <button onClick={onBack} className="w-8 h-8 rounded-full hover:bg-[#f2f4f6] flex items-center justify-center">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1a1c1e" strokeWidth="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+          </button>
+          <span className="text-sm font-semibold text-[#1a1c1e]">Thông tin liên hệ</span>
+        </div>
+      )}
 
       <div className="flex flex-col items-center px-6 py-8 bg-white border-b border-[#e6ebef]">
         <div className="relative mb-3">
@@ -191,16 +200,17 @@ function ContactWindow({ contact, onUpdateContact }: ContactWindowProps) {
           )}
         </div>
         <p className="text-base font-bold text-[#1a1c1e]">{contact.name}</p>
-        {online && <p className="text-xs text-[#31a24c] mt-0.5">Đang hoạt động</p>}
-        {lastSeen && <p className="text-xs text-[#70787d] mt-0.5">{formatLastSeen(lastSeen)}</p>}
+        {online && !profile?.is_deactivated && <p className="text-xs text-[#31a24c] mt-0.5">Đang hoạt động</p>}
+        {lastSeen && !profile?.is_deactivated && <p className="text-xs text-[#70787d] mt-0.5">{formatLastSeen(lastSeen)}</p>}
 
         {loadingProfile ? (
           <p className="text-xs text-[#70787d] text-center mt-1">Đang tải...</p>
-        ) : profile?.bio ? (
-          <p className="text-xs text-[#565f71] text-center mt-1">{profile.bio}</p>
+        ) : profile?.is_deactivated ? null : profile?.bio ? (
+          <p className="text-xs text-[#565f71] text-center mt-1 max-w-[280px] break-words whitespace-pre-line">{profile.bio}</p>
         ) : null}
 
-        <div className="flex gap-3 mt-4">
+        {!profile?.is_deactivated && (
+          <div className="flex gap-3 mt-4">
           {!iBlockedThem && (
             <button onClick={handleMessage} className="flex items-center gap-2 px-4 py-2 rounded-full bg-[#2563eb] text-white text-sm font-semibold hover:opacity-90 transition-opacity">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="white">
@@ -249,6 +259,7 @@ function ContactWindow({ contact, onUpdateContact }: ContactWindowProps) {
             </button>
           )}
         </div>
+        )}
       </div>
 
       {/* Nhóm chung & File — data thật */}

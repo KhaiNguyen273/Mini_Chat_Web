@@ -1,9 +1,9 @@
 import ConversationItem from "./ConversationItem"
 import { useConversationContext } from '../../../contexts/ConversationContext'
 import { getLastMessagePreview } from '../../../utils/messagePreview'
-import { DEFAULT_AVATAR_URL } from "../../../constants"
 import { useSidebarTyping } from '../../../hooks/useSidebarTyping'
 import { useAuth } from '../../../hooks/useAuth'
+import { isAfterBySecond } from "../../../utils/timeCompare"
 
 interface ConversationListProps {
   selectedId: string | null
@@ -24,7 +24,7 @@ function ConversationList({ selectedId, onSelect }: ConversationListProps) {
         const isUnread = !!(
           c.last_message &&
           String(c.last_message.sender_id) !== String(user?.id) &&
-          (!c.last_read_at || new Date(c.last_message.created_at).getTime() > new Date(c.last_read_at).getTime())
+          (!c.last_read_at || isAfterBySecond(c.last_message.created_at, c.last_read_at))
         )
 
         return (

@@ -73,3 +73,11 @@ export const searchByPhone = async (phone: string, currentUserId: number) => {
 export const updateLastSeen = async (userId: number) => {
   await pool.query("UPDATE users SET last_seen_at = NOW() WHERE id = ?", [userId]);
 };
+
+export const findByIdIncludingDeleted = async (id: number) => {
+  const [rows] = await pool.query<User[]>(
+    "SELECT id, phone, name, bio, avatar_url, last_seen_at, is_deleted FROM users WHERE id = ?",
+    [id]
+  );
+  return rows[0] || null;
+};

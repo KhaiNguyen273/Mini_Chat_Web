@@ -61,11 +61,19 @@ function InfoHeader({ conversationId, detail, onSearchClick, isAdmin, currentUse
     <>
       <div className="flex flex-col items-center py-6 border-b border-[#e6ebef]">
         <div className="relative mb-3">
-          <GroupAvatar
-            avatarUrl={detail.conversation?.avatar_url}
-            memberAvatars={chatType === 'group' ? detail.members.map((m) => m.avatar_url) : undefined}
-            size={80}
-          />
+          {chatType === 'group' ? (
+            <GroupAvatar
+              avatarUrl={detail.conversation?.avatar_url}
+              memberAvatars={detail.members.map((m) => m.avatar_url)}
+              size={80}
+            />
+          ) : (
+            <img
+              src={detail.displayAvatar}
+              alt="avatar"
+              className="w-20 h-20 rounded-full object-cover"
+            />
+          )}
           {canChangeAvatar && (
             <button
               onClick={handleAvatarClick}

@@ -4,10 +4,16 @@ import { useUser } from '../../hooks/useUser'
 import { useToast } from '../../hooks/useToast'
 import { DEFAULT_AVATAR_URL } from '../../constants'
 import { uploadImageApi } from '../../api/upload.api'
+import { useConfirm } from '../../hooks/useConfirm'
+import { useAuth } from '../../hooks/useAuth'
+import { useNavigate } from 'react-router-dom'
 
 function ProfileDetails() {
-  const {showToast} = useToast()
+  const { showToast } = useToast()
   const { user, updateProfile, deleteAccount, loading } = useUser()
+  const { logout } = useAuth()
+  const navigate = useNavigate()
+  const confirm = useConfirm()
   const [isEditing, setIsEditing] = useState(false)
   const [name, setName] = useState(user?.name || '')
   const [bio, setBio] = useState(user?.bio || '')
@@ -15,6 +21,7 @@ function ProfileDetails() {
   const fileInputRef = useRef<HTMLInputElement>(null)
   const maxBio = 160
   const [removeAvatar, setRemoveAvatar] = useState(false)
+
 
   // ảnh mới đã chọn nhưng CHƯA lưu — chỉ preview cục bộ, không gọi API nào
   const [pendingFile, setPendingFile] = useState<File | null>(null)
@@ -84,13 +91,20 @@ function ProfileDetails() {
   }
 
   const handleDeleteAccount = async () => {
-    if (!confirm('Bạn chắc chắn muốn vô hiệu hoá tài khoản?')) return
+    const ok = await confirm({
+      title: 'Vô hiệu hoá tài khoản',
+      message: 'Bạn chắc chắn muốn vô hiệu hoá tài khoản? Hành động này không thể hoàn tác.',
+      confirmText: 'Vô hiệu hoá',
+      danger: true,
+    })
+    if (!ok) return
     try {
       await deleteAccount()
-      window.location.href = '/login'
-      showToast("Đã vô hiệu hóa tài khoản","success")
+      await logout() // MỚI — dọn sạch accessToken + socket + user
+      navigate('/login', { replace: true })
+      showToast('Đã vô hiệu hóa tài khoản', 'success')
     } catch {
-      showToast("Đã vô hiệu hóa tài khoản thất bại","error")
+      showToast('Vô hiệu hóa tài khoản thất bại', 'error')
     }
   }
 

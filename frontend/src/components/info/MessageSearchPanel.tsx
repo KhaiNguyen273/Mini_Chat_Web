@@ -37,7 +37,7 @@ function MessageSearchPanel({ conversationId, onBack, onJumpToMessage }: Message
   }
 
   return (
-    <div className="flex flex-col w-72 shrink-0 h-full bg-white border-l border-[#e6ebef]">
+    <div className="flex flex-col w-full md:w-72 shrink-0 h-full bg-white border-l border-[#e6ebef]">
       <div className="flex items-center gap-2 px-4 py-3 border-b border-[#e6ebef] min-h-[60px]">
         <button onClick={onBack} className="w-7 h-7 rounded-full hover:bg-[#f2f4f6] flex items-center justify-center">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#1a1c1e" strokeWidth="2"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>

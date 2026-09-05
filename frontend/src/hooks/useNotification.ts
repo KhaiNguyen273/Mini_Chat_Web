@@ -58,7 +58,13 @@ export function useNotification() {
     if (!socket) return
 
     const handleNew = (n: any) => {
-      setNotifications((prev) => (prev.some((x) => x.id === String(n.id)) ? prev : [{ ...n, id: String(n.id) }, ...prev]))
+      const normalized = {
+        ...n,
+        id: String(n.id),
+        reference_id: n.reference_id != null ? String(n.reference_id) : n.reference_id,
+        conversation_id: n.conversation_id != null ? String(n.conversation_id) : null,
+      }
+      setNotifications((prev) => (prev.some((x) => x.id === normalized.id) ? prev : [normalized, ...prev]))
     }
 
     socket.on('notification:new', handleNew)
@@ -98,7 +104,7 @@ export function useNotification() {
 
     const handleRemoved = ({ type, reference_type, reference_id }: { type: string; reference_type: string; reference_id: number }) => {
       setNotifications((prev) =>
-        prev.filter((n) => !(n.type === type && n.reference_type === reference_type && n.reference_id === String(reference_id)))
+        prev.filter((n) => !(n.type === type && n.reference_type === reference_type && String(n.reference_id) === String(reference_id)))
       )
     }
 

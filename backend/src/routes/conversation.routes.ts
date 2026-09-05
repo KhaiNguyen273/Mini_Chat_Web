@@ -8,6 +8,9 @@ router.post("/private", authenticate, ConversationController.createPrivate);
 router.post("/group", authenticate, ConversationController.createGroup);
 router.get("/", authenticate, ConversationController.list);
 
+router.get("/search", authenticate, ConversationController.search);
+router.post("/private", authenticate, ConversationController.createPrivate);
+
 router.get("/mutual-groups/:userId", authenticate, ConversationController.getMutualGroups);
 router.get("/private-id/:userId", authenticate, ConversationController.getPrivateId);
 

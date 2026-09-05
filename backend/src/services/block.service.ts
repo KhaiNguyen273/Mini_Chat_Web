@@ -1,3 +1,5 @@
+
+
 import * as BlockModel from "../models/block.model";
 
 export const blockUser = async (userId: number, targetId: number) => {
@@ -19,3 +21,4 @@ export const unblockUser = async (userId: number, targetId: number) => {
 };
 
 export const getBlockedList = (userId: number) => BlockModel.listByBlocker(userId);
+

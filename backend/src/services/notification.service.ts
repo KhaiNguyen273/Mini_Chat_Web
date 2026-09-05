@@ -141,3 +141,20 @@ export const clearPendingNotification = async (userId: number, conversationId: n
     });
   } catch {}
 };
+
+// dọn notification friend_request khi lời mời bị thu hồi trước khi B phản
+// hồi — khác clearPendingNotification (dành cho pending_message/tin nhắn
+// làm quen), đây xoá theo reference_type "friendship"
+export const deleteFriendRequestNotification = async (userId: number, friendshipId: number) => {
+  await NotificationModel.deleteByReference(userId, friendshipId, "friendship");
+
+  try {
+    getIO().to(`user:${userId}`).emit("notification:removed", {
+      type: "friend_request",
+      reference_type: "friendship",
+      reference_id: friendshipId,
+    });
+  } catch {
+    // io chưa init — không fail REST
+  }
+};
