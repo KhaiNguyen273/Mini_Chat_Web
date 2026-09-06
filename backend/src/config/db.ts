@@ -14,7 +14,7 @@ export const pool = mysql.createPool({
   // UTC_TIMESTAMP()), không phải UTC. Khai 'Z' trước đây khiến driver hiểu
   // sai nguồn gốc timestamp, gây lệch giờ khi convert sang JS Date — ảnh
   // hưởng TOÀN BỘ cột DATETIME trong hệ thống, không riêng last_read_at
-  timezone: '+07:00',
+  timezone: process.env.DB_TIMEZONE || 'Z',
 });
 
 export const testConnection = async () => {

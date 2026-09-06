@@ -2,7 +2,7 @@
 
 A full-stack real-time messaging app built from scratch with a custom Node.js/Socket.IO backend (no Firebase/Pusher) — supporting private & group chat, friend system, read receipts, and media sharing.
 
-🔗 **Live demo:** https://mini-chat-web.vercel.app
+🔗 **Live demo:** [link if deployed]
 
 ---
 
@@ -32,82 +32,79 @@ A tour of the app's core flows — screenshots below each step.
 
 Sign up with phone + password, then log in. Session persists across page refresh via an httpOnly refresh cookie — no re-login needed, and the access token is refreshed silently in the background when it expires (15 min).
 
-![alt text](image.png)
-![alt text](image-1.png)
+<img src="docs/screenshots/01-register.png" width="400" alt="Register screen" />
+<img src="docs/screenshots/02-login.png" width="400" alt="Login screen" />
 
 ### 2. Friends & Contacts
 
 Search a contact by phone number, send a friend request, and manage incoming/outgoing requests. Accepting a request automatically opens (or activates) a private conversation with that person.
 
-![alt text](image-2.png)
-![alt text](image-3.png)
+<img src="docs/screenshots/03-contacts-search.png" width="400" alt="Contacts search" />
+<img src="docs/screenshots/04-friend-requests.png" width="400" alt="Friend requests list" />
 
 A message from a stranger (not yet a friend) doesn't land directly in your inbox — it goes to a **Pending** tab first, similar to Messenger/Instagram DMs, where you can preview it before accepting or rejecting.
 
-![alt text](image-4.png)
+<img src="docs/screenshots/05-pending.png" width="400" alt="Pending messages tab" />
 
 ### 3. Real-time Messaging
 
 Text, images, and files are all supported in one input — attachments show a live thumbnail preview before sending. Messages appear instantly on both ends via WebSocket, with a typing indicator ("...") shown while the other person is composing.
 
-![alt text](image-5.png) ![alt text](image-6.png)
-![alt text](image-7.png) ![alt text](image-8.png)
-
-![alt text](image-9.png)
+<img src="docs/screenshots/06-chat-conversation.png" width="400" alt="Chat conversation" />
+<img src="docs/screenshots/07-typing-attachment.png" width="400" alt="Typing indicator and attachment preview" />
 
 Each message shows **per-member read receipts** — a small avatar that "jumps" to the last message each person has actually seen, updated live as they read.
 
-![alt text](image-10.png)
+<img src="docs/screenshots/08-read-receipts.png" width="400" alt="Read receipt avatars" />
 
 ### 4. Group Chat & Member Management
 
 Create a group with 2+ friends, set a name and avatar. Admins can add/remove members, transfer admin rights, and rename the group — all changes sync live to every open client in the room.
 
-<!-- CHÈN ẢNH: popup tạo nhóm (chọn thành viên + đặt tên) -->
-<!-- CHÈN ẢNH: popup quản lý thành viên (Members) -->
+<img src="docs/screenshots/09-create-group.png" width="400" alt="Create group popup" />
+<img src="docs/screenshots/10-members-popup.png" width="400" alt="Members management popup" />
 
 If the sole admin tries to leave, the app forces them to pick a replacement admin first — the group can never end up without one.
 
-<!-- CHÈN ẢNH: modal "Chọn quản trị viên mới" -->
+<img src="docs/screenshots/11-assign-admin.png" width="400" alt="Assign new admin modal" />
 
 ### 5. Message Actions — Pin, Search, Recall
 
 Pin important messages (including images/files) for quick reference, search within a conversation with keyword highlighting, and recall (unsend) your own messages — all synced in real time to everyone in the chat.
 
-<!-- CHÈN ẢNH: danh sách tin nhắn đã ghim -->
-<!-- CHÈN ẢNH: tìm kiếm tin nhắn + highlight từ khoá -->
+<img src="docs/screenshots/12-pinned-messages.png" width="400" alt="Pinned messages list" />
+<img src="docs/screenshots/13-message-search.png" width="400" alt="In-conversation search with highlighting" />
 
 ### 6. Media Gallery & Conversation Search
 
 Every conversation has a dedicated media panel — images/videos and files, grouped by month. Clicking any item jumps straight to it in the message history.
 
-<!-- CHÈN ẢNH: panel File phương tiện và file -->
+<img src="docs/screenshots/14-media-panel.png" width="400" alt="Media and files panel" />
 
 You can also search across **all conversations** by message content from the sidebar, and jump directly into the matching chat.
 
-<!-- CHÈN ẢNH: kết quả tìm kiếm tin nhắn ở sidebar -->
+<img src="docs/screenshots/15-sidebar-search.png" width="400" alt="Sidebar conversation search results" />
 
 ### 7. Block, Mute, Notifications
 
 Block a user to stop receiving messages from them, mute a conversation to silence its notifications, and get real-time notification badges for friend requests, new messages, and pending chats.
 
-<!-- CHÈN ẢNH: danh sách người dùng đã chặn -->
-
-![alt text](image-11.png)
+<img src="docs/screenshots/16-blocked-list.png" width="400" alt="Blocked users list" />
+<img src="docs/screenshots/17-notifications.png" width="400" alt="Notifications page" />
 
 ### 8. Presence & Profile
 
 See who's online in real time, with "last seen" timestamps for offline users. Manage your own profile — avatar, bio, password — and deactivate your account when needed (with graceful fallback for group admin handoff and anonymized chat history).
 
-<!-- CHÈN ẢNH: chấm online + last seen -->
-<!-- CHÈN ẢNH: trang hồ sơ cá nhân -->
+<img src="docs/screenshots/18-presence.png" width="400" alt="Online status and last seen" />
+<img src="docs/screenshots/19-profile.png" width="400" alt="Profile page" />
 
 ### 9. Responsive — Mobile & Desktop
 
 Full drill-down navigation on mobile (list → detail → back), with a bottom tab bar replacing the desktop sidebar. Every modal, popup, and panel adapts to small screens without breaking layout.
 
-<!-- CHÈN ẢNH: giao diện mobile (danh sách chat) -->
-<!-- CHÈN ẢNH: giao diện mobile (đang trong 1 đoạn chat) -->
+<img src="docs/screenshots/20-mobile-list.png" width="250" alt="Mobile conversation list" />
+<img src="docs/screenshots/21-mobile-chat.png" width="250" alt="Mobile chat view" />
 
 ---
 
