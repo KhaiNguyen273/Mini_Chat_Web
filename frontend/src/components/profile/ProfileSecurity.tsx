@@ -7,7 +7,7 @@ function ProfileSecurity() {
   const [current, setCurrent] = useState('')
   const [newPass, setNewPass] = useState('')
   const [confirm, setConfirm] = useState('')
-  const { changePassword, error } = useUser()
+  const { changePassword } = useUser()
   const {showToast} = useToast()
 
   const handleChange = async () => {

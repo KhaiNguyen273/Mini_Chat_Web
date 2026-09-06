@@ -4,7 +4,6 @@ import type {
   User,
   UpdateProfilePayload,
   ChangePasswordPayload,
-  SearchUserResult,
   UploadAvatarResponse,
 } from '../types/user.types'
 

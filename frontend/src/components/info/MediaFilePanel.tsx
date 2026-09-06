@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useConversationMedia } from '../../hooks/useConversationMedia'
-import type { MediaCategory, MediaItem } from '../../types/media.types'
+import type { MediaItem } from '../../types/media.types'
 
 interface MediaFilePanelProps {
   conversationId: string
