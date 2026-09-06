@@ -34,9 +34,7 @@ export function useConversationDetail(conversationId: string) {
   }, [conversationId, seedOnlineStatus])
 
   useEffect(() => {
-    let cancelled = false
     fetchDetail().catch(() => {})
-    return () => { cancelled = true }
   }, [fetchDetail])
 
   useEffect(() => {
