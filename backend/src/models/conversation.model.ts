@@ -331,8 +331,14 @@ export const findLastVisibleMessage = async (conversationId: number, userId: num
 export const searchConversationsByMessage = async (userId: number, keyword: string) => {
   const [rows] = await pool.query<RowDataPacket[]>(
     `SELECT 
-       c.id, c.type, c.name AS group_name, c.avatar_url AS group_avatar_url,
-       ou.id AS other_user_id, ou.name AS other_user_name, ou.avatar_url AS other_user_avatar_url, ou.is_deleted AS other_user_is_deleted,
+       c.id, 
+       c.type, 
+       MAX(c.name) AS group_name, 
+       MAX(c.avatar_url) AS group_avatar_url,
+       MAX(ou.id) AS other_user_id, 
+       MAX(ou.name) AS other_user_name, 
+       MAX(ou.avatar_url) AS other_user_avatar_url, 
+       MAX(ou.is_deleted) AS other_user_is_deleted,
        COUNT(m.id) AS match_count,
        MAX(m.created_at) AS last_match_at,
        SUBSTRING_INDEX(GROUP_CONCAT(m.content ORDER BY m.created_at DESC SEPARATOR '||'), '||', 1) AS last_match_content
@@ -346,7 +352,7 @@ export const searchConversationsByMessage = async (userId: number, keyword: stri
      LEFT JOIN conversation_members om ON om.conversation_id = c.id AND om.user_id != ? AND c.type = 'private'
      LEFT JOIN users ou ON ou.id = om.user_id
      WHERE m.is_deleted = false AND m.content LIKE ? AND c.status = 'active'
-     GROUP BY c.id
+     GROUP BY c.id, c.type
      ORDER BY last_match_at DESC
      LIMIT 30`,
     [userId, userId, userId, `%${keyword}%`]

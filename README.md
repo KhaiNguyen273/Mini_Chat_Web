@@ -2,13 +2,9 @@
 
 A full-stack real-time messaging app built from scratch with a custom Node.js/Socket.IO backend (no Firebase/Pusher) — supporting private & group chat, friend system, read receipts, and media sharing.
 
-## Demo
+🔗 **Live demo:** https://mini-chat-web.vercel.app
 
-<!-- CHÈN ẢNH/GIF DEMO Ở ĐÂY -->
-<!-- Gợi ý nên có: (1) màn hình chat chính với 2 người nhắn qua lại realtime, -->
-<!-- (2) tạo nhóm + quản lý thành viên, (3) responsive mobile view -->
-
-🔗 **Live demo:** [link nếu đã deploy]
+---
 
 ## Tech Stack
 
@@ -26,6 +22,95 @@ A full-stack real-time messaging app built from scratch with a custom Node.js/So
 ![JWT](https://img.shields.io/badge/JWT-black?style=flat&logo=JSON%20web%20tokens)
 ![Cloudinary](https://img.shields.io/badge/Cloudinary-3448C5?style=flat&logo=cloudinary&logoColor=white)
 
+---
+
+## Walkthrough
+
+A tour of the app's core flows — screenshots below each step.
+
+### 1. Auth — Register, Login, Silent Refresh
+
+Sign up with phone + password, then log in. Session persists across page refresh via an httpOnly refresh cookie — no re-login needed, and the access token is refreshed silently in the background when it expires (15 min).
+
+![alt text](image.png)
+![alt text](image-1.png)
+
+### 2. Friends & Contacts
+
+Search a contact by phone number, send a friend request, and manage incoming/outgoing requests. Accepting a request automatically opens (or activates) a private conversation with that person.
+
+![alt text](image-2.png)
+![alt text](image-3.png)
+
+A message from a stranger (not yet a friend) doesn't land directly in your inbox — it goes to a **Pending** tab first, similar to Messenger/Instagram DMs, where you can preview it before accepting or rejecting.
+
+![alt text](image-4.png)
+
+### 3. Real-time Messaging
+
+Text, images, and files are all supported in one input — attachments show a live thumbnail preview before sending. Messages appear instantly on both ends via WebSocket, with a typing indicator ("...") shown while the other person is composing.
+
+![alt text](image-5.png) ![alt text](image-6.png)
+![alt text](image-7.png) ![alt text](image-8.png)
+
+![alt text](image-9.png)
+
+Each message shows **per-member read receipts** — a small avatar that "jumps" to the last message each person has actually seen, updated live as they read.
+
+![alt text](image-10.png)
+
+### 4. Group Chat & Member Management
+
+Create a group with 2+ friends, set a name and avatar. Admins can add/remove members, transfer admin rights, and rename the group — all changes sync live to every open client in the room.
+
+<!-- CHÈN ẢNH: popup tạo nhóm (chọn thành viên + đặt tên) -->
+<!-- CHÈN ẢNH: popup quản lý thành viên (Members) -->
+
+If the sole admin tries to leave, the app forces them to pick a replacement admin first — the group can never end up without one.
+
+<!-- CHÈN ẢNH: modal "Chọn quản trị viên mới" -->
+
+### 5. Message Actions — Pin, Search, Recall
+
+Pin important messages (including images/files) for quick reference, search within a conversation with keyword highlighting, and recall (unsend) your own messages — all synced in real time to everyone in the chat.
+
+<!-- CHÈN ẢNH: danh sách tin nhắn đã ghim -->
+<!-- CHÈN ẢNH: tìm kiếm tin nhắn + highlight từ khoá -->
+
+### 6. Media Gallery & Conversation Search
+
+Every conversation has a dedicated media panel — images/videos and files, grouped by month. Clicking any item jumps straight to it in the message history.
+
+<!-- CHÈN ẢNH: panel File phương tiện và file -->
+
+You can also search across **all conversations** by message content from the sidebar, and jump directly into the matching chat.
+
+<!-- CHÈN ẢNH: kết quả tìm kiếm tin nhắn ở sidebar -->
+
+### 7. Block, Mute, Notifications
+
+Block a user to stop receiving messages from them, mute a conversation to silence its notifications, and get real-time notification badges for friend requests, new messages, and pending chats.
+
+<!-- CHÈN ẢNH: danh sách người dùng đã chặn -->
+
+![alt text](image-11.png)
+
+### 8. Presence & Profile
+
+See who's online in real time, with "last seen" timestamps for offline users. Manage your own profile — avatar, bio, password — and deactivate your account when needed (with graceful fallback for group admin handoff and anonymized chat history).
+
+<!-- CHÈN ẢNH: chấm online + last seen -->
+<!-- CHÈN ẢNH: trang hồ sơ cá nhân -->
+
+### 9. Responsive — Mobile & Desktop
+
+Full drill-down navigation on mobile (list → detail → back), with a bottom tab bar replacing the desktop sidebar. Every modal, popup, and panel adapts to small screens without breaking layout.
+
+<!-- CHÈN ẢNH: giao diện mobile (danh sách chat) -->
+<!-- CHÈN ẢNH: giao diện mobile (đang trong 1 đoạn chat) -->
+
+---
+
 ## Key Features
 
 - **Real-time messaging via WebSocket** — instant delivery, typing indicators, and read receipts (per-member "seen" avatars) without polling
@@ -33,9 +118,20 @@ A full-stack real-time messaging app built from scratch with a custom Node.js/So
 - **Friend system with request lifecycle** — send/cancel/accept/reject, plus a "stranger message request" flow (pending conversations) similar to Messenger/Instagram DMs
 - **Group chat management** — role-based permissions (admin/member), forced admin handoff when the last admin leaves, real-time role/member sync across all open clients
 - **Media handling** — image/file upload to Cloudinary, per-conversation media gallery grouped by month, message search with highlighting
+- **Fully responsive** — mobile drill-down navigation with bottom tab bar, desktop multi-column layout
+
+---
 
 ## Architecture Highlights
 
 Real-time state is synced through a single source of truth: every mutation (send message, pin, block, kick) goes through a REST or Socket.IO handler on the backend, which then **broadcasts the resulting event back to the room** — the frontend never trusts its own optimistic guess for shared state, it waits for the server echo. This avoided a whole class of desync bugs between multiple open tabs/devices.
 
 The trickiest part was **read-receipt accuracy**: comparing `message.created_at` (millisecond precision) against `member.last_read_at` (MySQL `NOW()`, second precision) caused read/unread status to flicker when a message and a read-event happened in the same second. Fixed by normalizing both timestamps to second-level precision before comparison — a good example of a subtle bug that only shows up under real concurrent usage, not in manual single-user testing.
+
+---
+
+## Tech Notes
+
+- Backend: Express + Socket.IO on a shared HTTP server, MySQL via `mysql2/promise`, Cloudinary for media storage
+- Frontend: React + TypeScript + Vite, TailwindCSS, Context API for cross-page state (conversations, presence)
+- Deployed on Vercel (frontend) + Render (backend), MySQL hosted on Railway
